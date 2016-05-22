@@ -17,13 +17,13 @@ class DataCapture():
         # Name it after the current time
         date_str = datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')
         self.storage_path = os.path.join(storage_path, date_str)
-        os.mkdir(self.storage_path)
 
         rospy.loginfo(self.storage_path)
 
         self.enable_capture = False
         self.data_buffer = list()
         self.target_count = 1
+        self.first_file = True
 
         # ROS topics
         rospy.Subscriber('/start', Empty, self.start_callback)
@@ -62,6 +62,11 @@ class DataCapture():
         if len(self.data_buffer) == 0:
             rospy.loginfo('Received no messages: No csv file is written')
             return
+
+        # Create the storage folder when writing the first file
+        if self.first_file:
+            os.mkdir(self.storage_path)
+            self.first_file = False
 
         # Create the first line of the csv file with column names
         column_line = ['stamp','linear_x','angular_z'] + \
