@@ -25,7 +25,7 @@ define europa_base position
   acceleration_bounds [-1.0 1.0 0 0 0 0 -90 90.0 ]
 
   # actual size
-  size [0.80 0.65 0.22]
+  size [0.80 0.70 0.22]
 
   # the center of rotation is offset from its center of area
   origin [0 0 0 0]
@@ -50,14 +50,14 @@ define europa europa_base_sensors
   # simplified Body shape:
   block( 
     points 8
-    point[0] [0.4 0.125]
-    point[1] [0.2 0.325]
-    point[2] [-0.2 0.325]
-    point[3] [-0.4 0.125]
-    point[4] [-0.4 -0.125]
-    point[5] [-0.2 -0.325]
-    point[6] [0.2 -0.325]
-    point[7] [0.4 -0.125]
+    point[0] [0.4 0.15]
+    point[1] [0.2 0.35]
+    point[2] [-0.2 0.35]
+    point[3] [-0.4 0.15]
+    point[4] [-0.4 -0.15]
+    point[5] [-0.2 -0.35]
+    point[6] [0.2 -0.35]
+    point[7] [0.4 -0.15]
     z [0 0.22]
   )
 )
