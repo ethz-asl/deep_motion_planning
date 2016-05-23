@@ -1,4 +1,4 @@
-image: ../worlds/bitmaps/simple.png
+image: ../worlds/bitmaps/rooms.png
 resolution: 0.01
 origin: [-4.975, -4.975, 0.0]
 occupied_thresh: 0.65

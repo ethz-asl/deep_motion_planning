@@ -26,5 +26,5 @@ floorplan
 europa
 (
 	name "europa"
-	pose [-3.0 0.0 0 90.0]
+	pose [-3.0 -3.0 0 90.0]
 )
