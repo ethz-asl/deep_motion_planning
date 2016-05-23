@@ -20,7 +20,7 @@ floorplan
   size [10.000 10.000 0.800]
   pose [0 0 0 0]
 
-  bitmap "bitmaps/simple.png"
+  bitmap "bitmaps/shapes.png"
 )
 
 europa
