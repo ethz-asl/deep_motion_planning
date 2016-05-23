@@ -1,0 +1,6 @@
+image: ../worlds/bitmaps/square.png
+resolution: 0.0185
+origin: [-5.9, -5.9, 0.0]
+occupied_thresh: 0.65
+free_thresh: 0.196
+negate: 0

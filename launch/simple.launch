@@ -1,0 +1,64 @@
+<launch>
+  <param name="/use_sim_time" type="bool" value="true" />
+  
+	<node pkg="stage_ros" type="stageros" name="stageros" args="$(find stage_worlds)/worlds/simple.world" respawn="false" >
+    <param name="base_watchdog_timeout" value="0.2"/>
+  </node>
+
+  <node name="fake_localization" pkg="fake_localization" type="fake_localization" respawn="false" />
+
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+	  <remap from="map" to="map"/>
+      <remap from="scan" to="base_scan"/>
+      <param name="odom_frame" value="odom"/>
+      <param name="map_update_interval" value="10.0"/>
+      <param name="maxUrange" value="10.0"/>
+      <param name="sigma" value="0.05"/>
+      <param name="kernelSize" value="1"/>
+      <param name="lstep" value="0.05"/>
+      <param name="astep" value="0.05"/>
+      <param name="iterations" value="5"/>
+      <param name="lsigma" value="0.075"/>
+      <param name="ogain" value="3.0"/>
+      <param name="lskip" value="0"/>
+      <param name="srr" value="0.01"/>
+      <param name="srt" value="0.02"/>
+      <param name="str" value="0.01"/>
+      <param name="stt" value="0.02"/>
+      <param name="linearUpdate" value="0.5"/>
+      <param name="angularUpdate" value="0.436"/>
+      <param name="temporalUpdate" value="-1.0"/>
+      <param name="resampleThreshold" value="0.5"/>
+      <param name="particles" value="80"/>
+      <param name="xmin" value="-50.0"/>
+      <param name="ymin" value="-50.0"/>
+      <param name="xmax" value="50.0"/>
+      <param name="ymax" value="50.0"/>
+      <param name="delta" value="0.05"/>
+      <param name="llsamplerange" value="0.01"/>
+      <param name="llsamplestep" value="0.01"/>
+      <param name="lasamplerange" value="0.005"/>
+      <param name="lasamplestep" value="0.005"/>
+    </node>
+
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam file="$(find stage_worlds)/cfg/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find stage_worlds)/cfg/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find stage_worlds)/cfg/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find stage_worlds)/cfg/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find stage_worlds)/cfg/base_local_planner_params.yaml" command="load" />
+	</node>
+
+  <arg name="map_file" default="$(find stage_worlds)/cfg/simple.yaml"/>
+	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)">
+	  <remap from="map" to="st_map"/>
+	</node>
+
+  <include file="$(find ardrone_teleop)/launch/ps3.launch" />
+
+  <node name="data_capture" pkg="data_capture" type="data_capture_node.py" output="screen">
+    <remap from="cmd_vel" to="cmd_vel_stamped"/>
+    <remap from="scan" to="base_scan"/>
+  </node>
+
+</launch>
