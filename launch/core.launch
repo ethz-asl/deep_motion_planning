@@ -2,6 +2,7 @@
 
   <node name="fake_localization" pkg="fake_localization" type="fake_localization" respawn="false" />
 
+<!--
   <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
 	  <remap from="map" to="gmapping_map"/>
       <remap from="scan" to="base_scan"/>
@@ -35,6 +36,7 @@
       <param name="lasamplerange" value="0.005"/>
       <param name="lasamplestep" value="0.005"/>
     </node>
+  -->
 
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
     <rosparam file="$(find stage_worlds)/cfg/costmap_common_params.yaml" command="load" ns="global_costmap" />
