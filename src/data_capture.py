@@ -28,6 +28,7 @@ class DataCapture():
         # ROS topics
         rospy.Subscriber('/start', Empty, self.start_callback)
         rospy.Subscriber('/stop', Empty, self.stop_callback)
+        rospy.Subscriber('/abort', Empty, self.abort_callback)
 
         # Synchronized messages
         scan_sub = message_filters.Subscriber('scan', LaserScan)
@@ -47,6 +48,12 @@ class DataCapture():
             self.enable_capture = False
 
             self.__write_data_to_file__()
+
+    def abort_callback(self, data):
+        if self.enable_capture:
+            rospy.loginfo('Abort and clear buffered data')
+            self.data_buffer = list()
+            self.enable_capture = False
 
     def sync_callback(self, scan, cmd):
         if self.enable_capture:
