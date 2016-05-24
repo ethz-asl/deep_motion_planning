@@ -27,6 +27,7 @@ class MissionControl():
 
         self.start_pub = rospy.Publisher('/start', Empty, queue_size=1)
         self.stop_pub = rospy.Publisher('/stop', Empty, queue_size=1)
+        self.abort_pub = rospy.Publisher('/abort', Empty, queue_size=1)
 
         self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
@@ -74,10 +75,11 @@ class MissionControl():
         # result is empty
         if state == GoalStatus.SUCCEEDED:
             rospy.loginfo('Reached waypoint')
+
+            self.stop_pub.publish(Empty())
         else:
             rospy.loginfo('Action returned: {}'.format(GoalStatus.to_string(state)))
-
-        self.stop_pub.publish(Empty())
+            self.abort_pub.publish(Empty())
 
         self.__send_next_command__()
 
