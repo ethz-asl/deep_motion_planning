@@ -4,6 +4,9 @@ import actionlib
 from move_base_msgs.msg import MoveBaseAction
 from actionlib_msgs.msg import GoalStatus
 from std_msgs.msg import Empty
+from geometry_msgs.msg import PoseStamped
+
+import tf
 
 import os
 import math
@@ -28,6 +31,7 @@ class MissionControl():
         self.start_pub = rospy.Publisher('/start', Empty, queue_size=1)
         self.stop_pub = rospy.Publisher('/stop', Empty, queue_size=1)
         self.abort_pub = rospy.Publisher('/abort', Empty, queue_size=1)
+        self.target_pub = rospy.Publisher('/relative_target', PoseStamped, queue_size=1)
 
         self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
@@ -68,8 +72,24 @@ class MissionControl():
                 self.__active_callback__, self.__feedback_callback__)
 
     def __feedback_callback__(self, feedback):
-        # feedback only contains the current base position
-        pass
+        target = PoseStamped()
+        target.header.stamp = rospy.Time.now()
+
+        goal = self.mission[self.mission_index - 1][1]
+        target.pose.position.x = goal[0] - feedback.base_position.pose.position.x
+        target.pose.position.y = goal[1] - feedback.base_position.pose.position.y
+
+        yaw = goal[2] * math.pi/ 180.0
+        q = tf.transformations.quaternion_from_euler(0,0,yaw)
+
+        current_orientation = feedback.base_position.pose.orientation
+        p = [current_orientation.x, current_orientation.y, current_orientation.z, \
+                current_orientation.w]
+
+        target.pose.orientation = tf.transformations.quaternion_multiply(q, \
+                tf.transformations.quaternion_inverse(p))
+
+        self.target_pub.publish(target)
 
     def __done_callback__(self, state, result):
         # result is empty
