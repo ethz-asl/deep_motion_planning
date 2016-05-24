@@ -53,4 +53,6 @@
     <remap from="scan" to="base_scan"/>
   </node>
 
+  <node name="rviz_gui" pkg="rviz" type="rviz" args="../cfg/gui_config.rviz" />
+
 </launch>
