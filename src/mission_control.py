@@ -10,6 +10,7 @@ import tf
 
 import os
 import math
+import random
 
 from mission_file_parser import MissionFileParser
 
@@ -27,6 +28,9 @@ class MissionControl():
 
         self.mission = MissionFileParser(mission_file).get_mission()
         self.mission_index = 0
+        self.random_waypoint_number = 0
+
+        self.costmap = None
 
         self.start_pub = rospy.Publisher('/start', Empty, queue_size=1)
         self.stop_pub = rospy.Publisher('/stop', Empty, queue_size=1)
@@ -48,11 +52,12 @@ class MissionControl():
             rospy.loginfo('Mission Finished')
             rospy.signal_shutdown('Mission Finished')
 
-        call = {'wp': self.__goto_waypoint__, 'cmd': self.__execute_command__}
+        call = {'wp': self.__goto_waypoint__, \
+                'cmd': self.__execute_command__, \
+                'rd': self.__goto_random__ }
 
         item = self.mission[self.mission_index]
         call[item[0]](item[1])
-        self.mission_index += 1
 
     def __goto_waypoint__(self, coordinates):
         rospy.loginfo('Goto waypoint: {}'.format(coordinates))
@@ -70,6 +75,20 @@ class MissionControl():
 
         self.navigation_client.send_goal(goal.action_goal.goal, self.__done_callback__, \
                 self.__active_callback__, self.__feedback_callback__)
+
+    def __goto_random__(self, parameters):
+        # first call
+        if self.random_waypoint_number == 0:
+            self.random_waypoint_number = parameters[0]
+
+            rospy.loginfo('Goto random waypoints: {} left'.format(self.random_waypoint_number))
+
+        target = [0.0] * 3
+        target[0] = random.uniform(parameters[1], parameters[2])
+        target[1] = random.uniform(parameters[3], parameters[4])
+        target[2] = random.uniform(0.0, 360.0)
+
+        self.__goto_waypoint__(target)
 
     def __feedback_callback__(self, feedback):
         target = PoseStamped()
@@ -97,17 +116,31 @@ class MissionControl():
             rospy.loginfo('Reached waypoint')
 
             self.stop_pub.publish(Empty())
+
+            # Sample was valid, so reduce count by one
+            if self.random_waypoint_number > 0:
+                self.random_waypoint_number -= 1
+
         else:
             rospy.loginfo('Action returned: {}'.format(GoalStatus.to_string(state)))
             self.abort_pub.publish(Empty())
 
-        self.__send_next_command__()
+            if self.random_waypoint_number > 0:
+                rospy.loginfo('Resample this random waypoint')
+
+        if self.random_waypoint_number > 0:
+            item = self.mission[self.mission_index]
+            self.__goto_random__(item[1])
+        else:
+            self.mission_index += 1
+            self.__send_next_command__()
 
     def __active_callback__(self):
         self.start_pub.publish(Empty())
 
-
     def __execute_command__(self, cmd):
         rospy.loginfo('Execute command: {}'.format(cmd))
+
+        self.mission_index += 1
         self.__send_next_command__()
             
