@@ -5,6 +5,7 @@ from move_base_msgs.msg import MoveBaseAction
 from actionlib_msgs.msg import GoalStatus
 from std_msgs.msg import Empty
 from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import OccupancyGrid
 
 import tf
 
@@ -37,14 +38,20 @@ class MissionControl():
         self.abort_pub = rospy.Publisher('/abort', Empty, queue_size=1)
         self.target_pub = rospy.Publisher('/relative_target', PoseStamped, queue_size=1)
 
+        self.cost_map_sub = rospy.Subscriber('/move_base/global_costmap/costmap', OccupancyGrid, \
+                self.__costmap_callback__)
+
         self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
         while not self.navigation_client.wait_for_server(rospy.Duration(5)):
             rospy.loginfo('Waiting for move_base action server')
 
-        rospy.loginfo('Start mission')
-        self.__send_next_command__()
-        
+        if len(self.mission) > 0:
+            rospy.loginfo('Start mission')
+            self.__send_next_command__()
+        else:
+            rospy.logerr('Mission file contains no commands')
+            rospy.signal_shutdown('Mission Finished')
 
     def __send_next_command__(self):
 
@@ -83,10 +90,14 @@ class MissionControl():
 
             rospy.loginfo('Goto random waypoints: {} left'.format(self.random_waypoint_number))
 
-        target = [0.0] * 3
-        target[0] = random.uniform(parameters[1], parameters[2])
-        target[1] = random.uniform(parameters[3], parameters[4])
-        target[2] = random.uniform(0.0, 360.0)
+        found_valid_sample = False
+        while not found_valid_sample:
+            target = [0.0] * 3
+            target[0] = random.uniform(parameters[1], parameters[2])
+            target[1] = random.uniform(parameters[3], parameters[4])
+            target[2] = random.uniform(0.0, 360.0)
+
+            found_valid_sample = self.__check_target_validity__(target)
 
         self.__goto_waypoint__(target)
 
@@ -143,4 +154,21 @@ class MissionControl():
 
         self.mission_index += 1
         self.__send_next_command__()
+
+    def __costmap_callback__(self, data):
+        self.costmap = data
             
+    def __check_target_validity__(self, target):
+        threshold = 50
+
+        if self.costmap:
+            x_pixel = int((target[0] - self.costmap.info.origin.position.x) /
+                    self.costmap.info.resolution)
+            y_pixel = int((target[1] - self.costmap.info.origin.position.y) /
+                    self.costmap.info.resolution)
+
+            return self.costmap.data[int(x_pixel + self.costmap.info.width * y_pixel)] < threshold
+        else:
+            rospy.logwarn('No costmap available')
+            return False
+
