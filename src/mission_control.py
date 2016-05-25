@@ -38,8 +38,10 @@ class MissionControl():
         self.abort_pub = rospy.Publisher('/abort', Empty, queue_size=1)
         self.target_pub = rospy.Publisher('/relative_target', PoseStamped, queue_size=1)
 
-        self.cost_map_sub = rospy.Subscriber('/move_base/global_costmap/costmap', OccupancyGrid, \
+        self.costmap_sub = rospy.Subscriber('/move_base/global_costmap/costmap', OccupancyGrid, \
                 self.__costmap_callback__)
+        self.costmap_update_sub = rospy.Subscriber('/move_base/global_costmap/costmap_updates', \
+                OccupancyGridUpdate, self.__costmap_update_callback__)
 
         self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
@@ -157,6 +159,9 @@ class MissionControl():
 
     def __costmap_callback__(self, data):
         self.costmap = data
+
+    def __costmap_update_callback__(self, data):
+        print('update')
             
     def __check_target_validity__(self, target):
         threshold = 50
