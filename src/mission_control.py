@@ -6,12 +6,14 @@ from actionlib_msgs.msg import GoalStatus
 from std_msgs.msg import Empty
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid
+from map_msgs.msg import OccupancyGridUpdate
 
 import tf
 
 import os
 import math
 import random
+import numpy as np
 
 from mission_file_parser import MissionFileParser
 
@@ -161,7 +163,13 @@ class MissionControl():
         self.costmap = data
 
     def __costmap_update_callback__(self, data):
-        print('update')
+        update = np.array(data.data).reshape([data.height,data.width])
+
+        current = np.array(self.costmap.data).reshape([self.costmap.info.height,
+            self.costmap.info.width])
+        current[data.y:data.y+data.height,data.x:data.x+data.width] = update
+
+        self.costmap.data = current.flatten()
             
     def __check_target_validity__(self, target):
         threshold = 50
