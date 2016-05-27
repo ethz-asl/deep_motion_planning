@@ -112,8 +112,8 @@ class MissionControl():
         target = PoseStamped()
         target.header.stamp = rospy.Time.now()
 
-        target.pose.position.x = self.current_target[0] - feedback.base_position.pose.position.x
-        target.pose.position.y = self.current_target[1] - feedback.base_position.pose.position.y
+        goal_position_difference = [self.current_target[0] - feedback.base_position.pose.position.x,
+                                    self.current_target[1] - feedback.base_position.pose.position.y]
 
         yaw = self.current_target[2] * math.pi/ 180.0
         q = tf.transformations.quaternion_from_euler(0,0,yaw)
@@ -122,12 +122,19 @@ class MissionControl():
         p = [current_orientation.x, current_orientation.y, current_orientation.z, \
                 current_orientation.w]
 
-        orientation = tf.transformations.quaternion_multiply(q, \
+        goal_position_base_frame = tf.transformations.quaternion_multiply(tf.transformations.quaternion_inverse(p),
+                tf.transformations.quaternion_multiply([goal_position_difference[0],
+                    goal_position_difference[1], 0, 0], p))
+
+        orientation_to_target = tf.transformations.quaternion_multiply(q, \
                 tf.transformations.quaternion_inverse(p))
-        target.pose.orientation.x = orientation[0]
-        target.pose.orientation.y = orientation[1]
-        target.pose.orientation.z = orientation[2]
-        target.pose.orientation.w = orientation[3]
+        target.pose.orientation.x = orientation_to_target[0]
+        target.pose.orientation.y = orientation_to_target[1]
+        target.pose.orientation.z = orientation_to_target[2]
+        target.pose.orientation.w = orientation_to_target[3]
+
+        target.pose.position.x = goal_position_base_frame[0]
+        target.pose.position.y = -goal_position_base_frame[1]
 
         self.target_pub.publish(target)
 
