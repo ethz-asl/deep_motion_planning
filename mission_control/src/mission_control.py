@@ -7,6 +7,7 @@ from std_msgs.msg import Empty
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid
 from map_msgs.msg import OccupancyGridUpdate
+import std_srvs.srv
 
 import tf
 
@@ -34,6 +35,9 @@ class MissionControl():
         self.random_waypoint_number = 0
         self.current_target = [0,0,0]
 
+        self.command_start = rospy.Time.now().to_sec()
+        self.command_timeout = rospy.get_param('command_timeout', default=360.0)
+
         self.costmap = None
 
         self.start_pub = rospy.Publisher('/start', Empty, queue_size=1)
@@ -50,6 +54,8 @@ class MissionControl():
 
         while not self.navigation_client.wait_for_server(rospy.Duration(5)):
             rospy.loginfo('Waiting for move_base action server')
+
+        rospy.wait_for_service('/reset_positions')
 
         if len(self.mission) > 0:
             rospy.loginfo('Start mission')
@@ -87,6 +93,8 @@ class MissionControl():
 
         self.current_target = coordinates
 
+        self.command_start = rospy.Time.now().to_sec()
+
         self.navigation_client.send_goal(goal.action_goal.goal, self.__done_callback__, \
                 self.__active_callback__, self.__feedback_callback__)
 
@@ -109,6 +117,13 @@ class MissionControl():
         self.__goto_waypoint__(target)
 
     def __feedback_callback__(self, feedback):
+
+        if (rospy.Time.now().to_sec() - self.command_start) > self.command_timeout:
+            rospy.loginfo('Timeout for command execution')
+
+            self.navigation_client.cancel_goal()
+            return
+
         target = PoseStamped()
         target.header.stamp = rospy.Time.now()
 
@@ -145,9 +160,6 @@ class MissionControl():
 
             self.stop_pub.publish(Empty())
 
-            # Wait shortly before publishing the next command
-            rospy.sleep(0.5)
-
             # Sample was valid, so reduce count by one
             if self.random_waypoint_number > 0:
                 self.random_waypoint_number -= 1
@@ -155,9 +167,13 @@ class MissionControl():
         else:
             rospy.loginfo('Action returned: {}'.format(GoalStatus.to_string(state)))
             self.abort_pub.publish(Empty())
+            self.__reset_simulation__()
 
             if self.random_waypoint_number > 0:
                 rospy.loginfo('Resample this random waypoint')
+
+        # Wait shortly before publishing the next command
+        rospy.sleep(0.5)
 
         if self.random_waypoint_number > 0:
             item = self.mission[self.mission_index]
@@ -171,6 +187,8 @@ class MissionControl():
 
     def __execute_command__(self, cmd):
         rospy.loginfo('Execute command: {}'.format(cmd))
+
+        self.command_start = rospy.Time.now()
 
         self.mission_index += 1
         self.__send_next_command__()
@@ -200,4 +218,12 @@ class MissionControl():
         else:
             rospy.logwarn('No costmap available')
             return False
+
+    def __reset_simulation__(self):
+        try:
+            reset_simulation = rospy.ServiceProxy('/reset_positions', std_srvs.srv.Empty)
+            reset_simulation()
+	except rospy.ServiceException, e:
+	    print('Service call failed: {}'.format(e))
+
 
