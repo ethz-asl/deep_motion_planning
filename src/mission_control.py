@@ -95,7 +95,7 @@ class MissionControl():
         if self.random_waypoint_number == 0:
             self.random_waypoint_number = parameters[0]
 
-            rospy.loginfo('Goto random waypoints: {} left'.format(self.random_waypoint_number))
+        rospy.loginfo('Goto random waypoint: {} remaining'.format(self.random_waypoint_number))
 
         found_valid_sample = False
         while not found_valid_sample:
