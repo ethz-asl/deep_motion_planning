@@ -197,13 +197,14 @@ class MissionControl():
         self.costmap = data
 
     def __costmap_update_callback__(self, data):
-        update = np.array(data.data).reshape([data.height,data.width])
+        if self.costmap:
+            update = np.array(data.data).reshape([data.height,data.width])
 
-        current = np.array(self.costmap.data).reshape([self.costmap.info.height,
-            self.costmap.info.width])
-        current[data.y:data.y+data.height,data.x:data.x+data.width] = update
+            current = np.array(self.costmap.data).reshape([self.costmap.info.height,
+                self.costmap.info.width])
+            current[data.y:data.y+data.height,data.x:data.x+data.width] = update
 
-        self.costmap.data = current.flatten()
+            self.costmap.data = current.flatten()
             
     def __check_target_validity__(self, target):
         threshold = 50
