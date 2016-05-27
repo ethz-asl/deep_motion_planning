@@ -46,15 +46,11 @@
     <rosparam file="$(find stage_worlds)/cfg/base_local_planner_params.yaml" command="load" />
 	</node>
 
-  <include file="$(find ardrone_teleop)/launch/ps3.launch" />
-
   <node name="data_capture" pkg="data_capture" type="data_capture_node.py" output="screen">
     <remap from="cmd_vel" to="cmd_vel_stamped"/>
     <remap from="scan" to="base_scan"/>
   </node>
 
   <node name="stamp_cmd_vel" pkg="data_capture" type="stamp_cmd_vel_node.py" output="screen" />
-
-  <node name="rviz_gui" pkg="rviz" type="rviz" args="../cfg/gui_config.rviz" />
 
 </launch>
