@@ -82,8 +82,10 @@ class DataCapture():
             self.first_file = False
 
         # Create the first line of the csv file with column names
+        # We define the length of the laser by the length of captured data, minus the fields
+        # that are not related to the laser (stamp, commands and target position)
         column_line = ['stamp','linear_x','angular_z'] + \
-                ['laser_' + str(i) for i in range(len(self.data_buffer[0]) - 3)] + ['target_x',
+                ['laser_' + str(i) for i in range(len(self.data_buffer[0]) - 6)] + ['target_x',
                         'target_y', 'target_yaw']
 
         # write the data into a csv file and reset the buffer
