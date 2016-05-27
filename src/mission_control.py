@@ -32,6 +32,7 @@ class MissionControl():
         self.mission = MissionFileParser(mission_file).get_mission()
         self.mission_index = 0
         self.random_waypoint_number = 0
+        self.current_target = [0,0,0]
 
         self.costmap = None
 
@@ -84,6 +85,8 @@ class MissionControl():
         goal.action_goal.goal.target_pose.pose.orientation.z = math.sin(yaw)
         goal.action_goal.goal.target_pose.pose.orientation.w = math.cos(yaw)
 
+        self.current_target = coordinates
+
         self.navigation_client.send_goal(goal.action_goal.goal, self.__done_callback__, \
                 self.__active_callback__, self.__feedback_callback__)
 
@@ -109,19 +112,22 @@ class MissionControl():
         target = PoseStamped()
         target.header.stamp = rospy.Time.now()
 
-        goal = self.mission[self.mission_index - 1][1]
-        target.pose.position.x = goal[0] - feedback.base_position.pose.position.x
-        target.pose.position.y = goal[1] - feedback.base_position.pose.position.y
+        target.pose.position.x = self.current_target[0] - feedback.base_position.pose.position.x
+        target.pose.position.y = self.current_target[1] - feedback.base_position.pose.position.y
 
-        yaw = goal[2] * math.pi/ 180.0
+        yaw = self.current_target[2] * math.pi/ 180.0
         q = tf.transformations.quaternion_from_euler(0,0,yaw)
 
         current_orientation = feedback.base_position.pose.orientation
         p = [current_orientation.x, current_orientation.y, current_orientation.z, \
                 current_orientation.w]
 
-        target.pose.orientation = tf.transformations.quaternion_multiply(q, \
+        orientation = tf.transformations.quaternion_multiply(q, \
                 tf.transformations.quaternion_inverse(p))
+        target.pose.orientation.x = orientation[0]
+        target.pose.orientation.y = orientation[1]
+        target.pose.orientation.z = orientation[2]
+        target.pose.orientation.w = orientation[3]
 
         self.target_pub.publish(target)
 
@@ -131,6 +137,9 @@ class MissionControl():
             rospy.loginfo('Reached waypoint')
 
             self.stop_pub.publish(Empty())
+
+            # Wait shortly before publishing the next command
+            rospy.sleep(0.5)
 
             # Sample was valid, so reduce count by one
             if self.random_waypoint_number > 0:
