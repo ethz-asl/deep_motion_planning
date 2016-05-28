@@ -4,7 +4,9 @@ import rospy
 from geometry_msgs.msg import Twist, TwistStamped
 
 class StampTwistMsgs():
-
+    """
+    Class to transform a Twist message into a TwistStamped message
+    """
     def __init__(self):
         self.cmd_vel_sub = rospy.Subscriber('/cmd_vel', Twist, self.callback)
         self.cmd_vel_stamped_pub = rospy.Publisher('/cmd_vel_stamped', TwistStamped, queue_size=1)

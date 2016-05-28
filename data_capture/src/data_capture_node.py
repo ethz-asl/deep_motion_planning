@@ -5,6 +5,7 @@ from roslib.packages import get_pkg_dir
 
 from data_capture import DataCapture
 
+# Get the root folder of this package and append data
 default_storage_path = get_pkg_dir('data_capture') + '/data/'
 
 def main():

@@ -12,11 +12,10 @@ import os
 from datetime import datetime
 
 class DataCapture():
-    """docstring for DataCapture"""
+    """Class that captures various ROS messages and saves them into a .csv file"""
     def __init__(self, storage_path):
 
-        # Create a new folder for each experiment
-        # Name it after the current time
+        # Prepare the generation of the storage folder
         date_str = datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')
         self.storage_path = os.path.join(storage_path, date_str)
 
@@ -24,7 +23,7 @@ class DataCapture():
 
         self.enable_capture = False
         self.data_buffer = list()
-        self.target_count = 1
+        self.target_count = 1 #sequential number for the file name
         self.first_file = True
 
         # ROS topics
@@ -41,11 +40,17 @@ class DataCapture():
         self.synchonizer.registerCallback(self.sync_callback)
 
     def start_callback(self, data):
+        """
+        Enable the data capture
+        """
         if not self.enable_capture:
             rospy.loginfo('Start data capture')
             self.enable_capture = True
 
     def stop_callback(self, data):
+        """
+        Disable data capture and write the cached messages into a file
+        """
         if self.enable_capture:
             rospy.loginfo('Stop data capture')
             self.enable_capture = False
@@ -53,12 +58,18 @@ class DataCapture():
             self.__write_data_to_file__()
 
     def abort_callback(self, data):
+        """
+        Disable data capture and clear cache without writing it into a file
+        """
         if self.enable_capture:
             rospy.loginfo('Abort and clear buffered data')
             self.data_buffer = list()
             self.enable_capture = False
 
     def sync_callback(self, scan, cmd, target):
+        """
+        Callback for the synchonizer that caches the synchonized messages
+        """
         if self.enable_capture:
             # concatenate the data and add it to the buffer
             orientation = [target.pose.orientation.x, target.pose.orientation.y,
@@ -69,6 +80,9 @@ class DataCapture():
             self.data_buffer.append(new_row)
 
     def __write_data_to_file__(self):
+        """
+        Write the cached data into a .csv file
+        """
         rospy.loginfo('Write data to file: {} items'.format(len(self.data_buffer)))
 
         # Prevent creation of empty files
