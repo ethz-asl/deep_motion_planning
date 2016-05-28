@@ -36,7 +36,7 @@ class MissionControl():
         self.current_target = [0,0,0]
 
         self.command_start = rospy.Time.now().to_sec()
-        self.command_timeout = rospy.get_param('command_timeout', default=360.0)
+        self.command_timeout = rospy.get_param('~command_timeout', default=360.0)
 
         self.costmap = None
 
