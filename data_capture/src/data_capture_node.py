@@ -12,7 +12,7 @@ def main():
 
     rospy.init_node('data_capture_node')
 
-    storage_path = rospy.get_param('storage_path',default_storage_path)
+    storage_path = rospy.get_param('~storage_path',default_storage_path)
     DataCapture(storage_path)
 
     rospy.spin()
