@@ -13,7 +13,7 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 requirements:
 	pip install -q -r requirements.txt
 
-data: requirements
+data:
 	python src/data/make_dataset.py
 
 clean:
