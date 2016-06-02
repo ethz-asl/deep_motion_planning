@@ -10,11 +10,17 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 # COMMANDS                                                                      #
 #################################################################################
 
+RAW_DATASET = 2016-05-27_19-18-40
+DATASET = test
+
 requirements:
 	pip install -q -r requirements.txt
 
 data:
-	python src/data/make_dataset.py
+	python src/data/make_dataset.py data/raw/$(RAW_DATASET)/ $(DATASET).h5
+
+train:
+	python src/model/train_model.py data/processed/$(DATASET).h5
 
 clean:
 	find . -name "*.pyc" -exec rm {} \;
