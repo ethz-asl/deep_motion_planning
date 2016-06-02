@@ -31,7 +31,7 @@ class DataHandler():
         """
         current_index = 0
         permutation = np.random.permutation(self.nrows)
-        while True 
+        while True:
             yield permutation[current_index:current_index+self.chunksize]
             current_index += self.chunksize
 
