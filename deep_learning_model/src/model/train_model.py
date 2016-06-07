@@ -9,6 +9,7 @@ import time
 import tensorflow as tf
 
 from data.data_handler import DataHandler
+from data.fast_data_handler import FastDataHandler
 import model.model as model
 
 def parse_args():
@@ -45,7 +46,7 @@ def run_training(args):
 
     with tf.Graph().as_default():
 
-        data_handler = DataHandler(args.datafile, args.batch_size)
+        data_handler = FastDataHandler(args.datafile, args.batch_size)
 
         data_placeholder, cmd_placeholder = placeholder_inputs(model.INPUT_SIZE, args.batch_size)
 
@@ -64,6 +65,8 @@ def run_training(args):
         with tf.Session() as sess:
         
             sess.run(tf.initialize_all_variables())
+
+            summary_writer = tf.train.SummaryWriter(args.train_dir, sess.graph)
 
             for step in range(args.max_steps):
                 start_time = time.time()
@@ -96,8 +99,6 @@ def main():
 
     # Open data handler
     project_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
-    data = DataHandler(os.path.join(project_dir,args.datafile), args.batch_size)
-    logger.info('Dataset loaded')
 
     logger.info('Start training')
     run_training(args)
