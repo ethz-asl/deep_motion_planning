@@ -34,6 +34,9 @@ sync_data_to_s3:
 sync_data_from_s3:
 	aws s3 sync s3://$(BUCKET)/data/ data/
 
+tensorboard:
+	tensorboard --logdir=models/default
+
 #################################################################################
 # PROJECT RULES                                                                 #
 #################################################################################

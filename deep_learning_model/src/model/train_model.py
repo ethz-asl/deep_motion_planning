@@ -83,6 +83,9 @@ def run_training(args):
                     # Print status to stdout.
                     logger.info('Step {}: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(step,
                         loss_value[0], loss_value[1], duration/1e-3))
+                    summary_str = sess.run(summary_op, feed_dict=feed_dict)
+                    summary_writer.add_summary(summary_str, step)
+                    summary_writer.flush()
 
                 # Save a checkpoint and evaluate the model periodically.
                 if step > 0 and step % 1000 == 0 or step == args.max_steps:

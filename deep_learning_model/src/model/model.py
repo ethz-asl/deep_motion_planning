@@ -26,7 +26,10 @@ def loss(prediction, cmd):
     return loss
 
 def training(loss, learning_rate):
-    tf.scalar_summary(loss.op.name, loss)
+    tf.scalar_summary('loss_linear_x', loss[0])
+    tf.scalar_summary('loss_angular_yaw', loss[1])
+    tf.scalar_summary('learning_rate', learning_rate)
+
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     global_step = tf.Variable(0, name='global_step', trainable=False)
     train_op = optimizer.minimize(loss, global_step=global_step)
