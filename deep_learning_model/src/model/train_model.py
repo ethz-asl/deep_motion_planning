@@ -81,8 +81,8 @@ def run_training(args):
 
                 if step > 0 and step % 100 == 0:
                     # Print status to stdout.
-                    logger.info('Step {}: loss = ({:.4f},{:.4f}) {:.3f} sec'.format(step,
-                        loss_value[0], loss_value[1], duration))
+                    logger.info('Step {}: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(step,
+                        loss_value[0], loss_value[1], duration/1e-3))
 
                 # Save a checkpoint and evaluate the model periodically.
                 if step > 0 and step % 1000 == 0 or step == args.max_steps:
