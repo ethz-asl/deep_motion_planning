@@ -22,7 +22,9 @@ def parse_args():
             parser.error("Unsupported file extension: Use {}".format(extensions))
         return filename
 
-    parser.add_argument('datafile', help='Filename of the training data', type=lambda
+    parser.add_argument('datafile_train', help='Filename of the training data', type=lambda
+            s:check_extension(['.h5'],s))
+    parser.add_argument('datafile_eval', help='Filename of the evaluation data', type=lambda
             s:check_extension(['.h5'],s))
     parser.add_argument('-s', '--max_steps', help='Number of batches to run', type=int, default=1000000)
     parser.add_argument('-b', '--batch_size', help='Size of training batches', type=int,  default=16)
@@ -35,8 +37,8 @@ def parse_args():
 
 def placeholder_inputs(data_size, batch_size):
     """Create placeholders for the tf graph"""
-    data_placeholder = tf.placeholder(tf.float32, shape=(batch_size, data_size))
-    cmd_placeholder = tf.placeholder(tf.float32, shape=(batch_size, 2))
+    data_placeholder = tf.placeholder(tf.float32, shape=None)
+    cmd_placeholder = tf.placeholder(tf.float32, shape=None)
 
     return data_placeholder, cmd_placeholder
 
@@ -48,7 +50,9 @@ def run_training(args):
 
     with tf.Graph().as_default():
 
-        data_handler = FastDataHandler(args.datafile, args.batch_size)
+        learning_rate = tf.Variable(args.learning_rate, trainable=False)
+
+        data_handler_train = FastDataHandler(args.datafile_train, args.batch_size)
 
         data_placeholder, cmd_placeholder = placeholder_inputs(model.INPUT_SIZE, args.batch_size)
 
@@ -56,11 +60,17 @@ def run_training(args):
 
         loss, loss_split = model.loss(prediction, cmd_placeholder)
 
-        train_op = model.training(loss, loss_split, args.learning_rate)
+        train_op = model.training(loss, loss_split, learning_rate)
 
-        eval_correct = model.evaluation(prediction, cmd_placeholder)
+        evaluation, evaluation_split = model.evaluation(prediction, cmd_placeholder)
+
+        tf.scalar_summary('loss', loss)
+        tf.scalar_summary('loss_linear_x', loss_split[0])
+        tf.scalar_summary('loss_angular_yaw', loss_split[1])
+        tf.scalar_summary('learning_rate', learning_rate)
 
         summary_op = tf.merge_all_summaries()
+        eval_summary_op = tf.merge_all_summaries()
 
         saver = tf.train.Saver()
             
@@ -68,12 +78,13 @@ def run_training(args):
         
             sess.run(tf.initialize_all_variables())
 
-            summary_writer = tf.train.SummaryWriter(storage_path, sess.graph)
+            summary_writer = tf.train.SummaryWriter(os.path.join(storage_path, 'train'), sess.graph)
+            eval_summary_writer = tf.train.SummaryWriter(os.path.join(storage_path, 'eval'), sess.graph)
 
             for step in range(args.max_steps):
                 start_time = time.time()
 
-                (X,Y) = data_handler.next_batch()
+                (X,Y) = data_handler_train.next_batch()
 
                 feed_dict = {data_placeholder: X, cmd_placeholder: Y}
 
@@ -91,7 +102,10 @@ def run_training(args):
 
                 if step > 0 and step % 1000 == 0 or step == args.max_steps:
                     # Evaluate model
-                    pass
+                    logger.info('Evaluate model')
+                    evaluate_model(sess, evaluation, evaluation_split, data_placeholder,
+                            cmd_placeholder, eval_summary_op, step, args.datafile_eval,
+                            4*8192, writer=eval_summary_writer)
 
                 if step > 0 and step % 1000 == 0 or step == args.max_steps:
                     # Save a checkpoint
@@ -99,12 +113,26 @@ def run_training(args):
                     filename = os.path.join(storage_path, 'snap')
                     saver.save(sess, filename, global_step=step)
 
+def evaluate_model(sess, evaluation, evaluation_split, data_placeholder, cmd_placeholder,
+        summary_op, step, datafile_eval, eval_n_elements, writer=None):
+
+    data_handler_eval = FastDataHandler(datafile_eval, eval_n_elements, eval_n_elements)
+
+    (X,Y) = data_handler_eval.next_batch()
+
+    feed_dict = {data_placeholder: X, cmd_placeholder: Y}
+    loss_value, loss_split_value = sess.run([evaluation, evaluation_split], feed_dict=feed_dict)
+
+    summary_str = sess.run(summary_op, feed_dict=feed_dict)
+    writer.add_summary(summary_str, step)
+    writer.flush()
+
 def main():
     logger = logging.getLogger(__name__)
     logger.info('Train our model on the given dataset:')
 
     args = parse_args()
-    logger.info(args.datafile)
+    logger.info(args.datafile_train)
 
     # Open data handler
     project_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)

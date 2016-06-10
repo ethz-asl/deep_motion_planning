@@ -17,7 +17,7 @@ class FastDataHandler():
             raise IOError('File does not exists: {}'.format(filepath))
 
         # Get the number of rows without loading any data into memory
-        with pd.HDFStore(filepath) as store:
+        with pd.HDFStore(filepath, mode='r') as store:
             self.nrows = store.get_storer('data').nrows
 
         # Make sure, we can return a chunk with the correct size
@@ -25,6 +25,12 @@ class FastDataHandler():
             raise ValueError('Chunksize is to large for the dataset: {} chunks > {} rows'.format(chunksize, self.nrows))
 
         self.batches = self.__generate_next_batch__()
+
+    def steps_per_epoch(self):
+        """
+        Get the number of steps to process the entire dataset once
+        """
+        return self.nrows // self.batchsize
 
     def __generate_next_batch__(self):
 
