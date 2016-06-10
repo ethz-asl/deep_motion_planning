@@ -24,11 +24,11 @@ def parse_args():
 
     parser.add_argument('datafile', help='Filename of the training data', type=lambda
             s:check_extension(['.h5'],s))
-    parser.add_argument('-s', '--max_steps', help='Number of batches to run', default=1000000)
-    parser.add_argument('-b', '--batch_size', help='Size of training batches', default=16)
+    parser.add_argument('-s', '--max_steps', help='Number of batches to run', type=int, default=1000000)
+    parser.add_argument('-b', '--batch_size', help='Size of training batches', type=int,  default=16)
     parser.add_argument('-t', '--train_dir', help='Directory to save the model snapshots',
             default='./models/default')
-    parser.add_argument('-l', '--learning_rate', help='Initial learning rate', default=0.0001)
+    parser.add_argument('-l', '--learning_rate', help='Initial learning rate', type=float, default=0.01)
     args = parser.parse_args()
 
     return args
