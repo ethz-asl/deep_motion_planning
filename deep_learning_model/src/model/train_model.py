@@ -44,6 +44,8 @@ def run_training(args):
     """Train a tensorflow model"""
     logger = logging.getLogger(__name__)
 
+    storage_path = os.path.join(args.train_dir, (time.strftime('%Y-%m-%d_%H-%M_') + model.NAME))
+
     with tf.Graph().as_default():
 
         data_handler = FastDataHandler(args.datafile, args.batch_size)
@@ -66,7 +68,7 @@ def run_training(args):
         
             sess.run(tf.initialize_all_variables())
 
-            summary_writer = tf.train.SummaryWriter(args.train_dir, sess.graph)
+            summary_writer = tf.train.SummaryWriter(storage_path, sess.graph)
 
             for step in range(args.max_steps):
                 start_time = time.time()
@@ -87,10 +89,14 @@ def run_training(args):
                     summary_writer.add_summary(summary_str, step)
                     summary_writer.flush()
 
-                # Save a checkpoint and evaluate the model periodically.
                 if step > 0 and step % 1000 == 0 or step == args.max_steps:
+                    # Evaluate model
+                    pass
+
+                if step > 0 and step % 1000 == 0 or step == args.max_steps:
+                    # Save a checkpoint
                     logger.info('Save model snapshot')
-                    filename = os.path.join(args.train_dir, 'snap')
+                    filename = os.path.join(storage_path, 'snap')
                     saver.save(sess, filename, global_step=step)
 
 def main():

@@ -3,6 +3,8 @@ import logging
 
 import tensorflow as tf
 
+NAME = "two_fully_connected"
+
 INPUT_SIZE = 723
 CMD_SIZE = 2
 
