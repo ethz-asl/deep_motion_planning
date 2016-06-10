@@ -23,13 +23,15 @@ def inference(data):
     return prediction
 
 def loss(prediction, cmd):
-    loss = tf.reduce_sum(tf.abs(prediction - cmd), 0)
+    loss_split = tf.reduce_mean((prediction - cmd), 0)
+    loss = tf.reduce_mean(tf.abs(prediction - cmd))
 
-    return loss
+    return loss, loss_split
 
-def training(loss, learning_rate):
-    tf.scalar_summary('loss_linear_x', loss[0])
-    tf.scalar_summary('loss_angular_yaw', loss[1])
+def training(loss, loss_split, learning_rate):
+    tf.scalar_summary('loss', loss)
+    tf.scalar_summary('loss_linear_x', loss_split[0])
+    tf.scalar_summary('loss_angular_yaw', loss_split[1])
     tf.scalar_summary('learning_rate', learning_rate)
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
@@ -39,4 +41,4 @@ def training(loss, learning_rate):
     return train_op
 
 def evaluation(prediction, labels):
-    return tf.reduce_sum(tf.abs(prediction - labels), 0)
+    return tf.reduce_mean(tf.abs(prediction - labels), 0)

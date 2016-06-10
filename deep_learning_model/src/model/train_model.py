@@ -54,9 +54,9 @@ def run_training(args):
 
         prediction = model.inference(data_placeholder)
 
-        loss = model.loss(prediction, cmd_placeholder)
+        loss, loss_split = model.loss(prediction, cmd_placeholder)
 
-        train_op = model.training(loss, args.learning_rate)
+        train_op = model.training(loss, loss_split, args.learning_rate)
 
         eval_correct = model.evaluation(prediction, cmd_placeholder)
 
@@ -77,14 +77,14 @@ def run_training(args):
 
                 feed_dict = {data_placeholder: X, cmd_placeholder: Y}
 
-                _, loss_value = sess.run([train_op, loss], feed_dict=feed_dict)
+                _, loss_value, loss_split_value = sess.run([train_op, loss, loss_split], feed_dict=feed_dict)
 
                 duration = time.time() - start_time
 
                 if step > 0 and step % 100 == 0:
                     # Print status to stdout.
                     logger.info('Step {}: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(step,
-                        loss_value[0], loss_value[1], duration/1e-3))
+                        loss_split_value[0], loss_split_value[1], duration/1e-3))
                     summary_str = sess.run(summary_op, feed_dict=feed_dict)
                     summary_writer.add_summary(summary_str, step)
                     summary_writer.flush()
