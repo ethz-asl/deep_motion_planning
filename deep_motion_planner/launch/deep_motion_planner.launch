@@ -1,0 +1,6 @@
+<launch>
+  <node name="deep_motion_planner" pkg="deep_motion_planner" type="deep_motion_planner_node.py"
+  output="screen">
+    <remap from="scan" to="base_scan"/>
+  </node>
+</launch>
