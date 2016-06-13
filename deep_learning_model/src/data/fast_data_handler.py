@@ -34,17 +34,31 @@ class FastDataHandler():
 
     def __generate_next_batch__(self):
 
+        data_columns = None
+        cmd_columns = None
         with pd.HDFStore(self.filepath, mode='r') as store:
             while True:
                 current_index = 0
                 for i in range(self.nrows // self.chunksize):
-                    permutation = np.random.permutation(self.chunksize)
                     chunk = store.select('data',
                             start=i*self.chunksize, stop=(i+1)*self.chunksize)
-                    for j in range(chunk.shape[0] // self.batchsize):
-                        yield chunk.iloc[permutation[j*self.batchsize:(j+1)*self.batchsize]]
-                        current_index += self.batchsize
+                    chunk = chunk.reindex(np.random.permutation(chunk.index))
 
+                    if not data_columns:
+                        data_columns = list()
+                        cmd_columns = list()
+                        for j,column in enumerate(chunk.columns):
+                            if column.split('_')[0] in ['laser','target']\
+                                and not column.split('_')[1] == 'id':
+                                data_columns.append(j)
+                            if column in ['linear_x','angular_z']:
+                                cmd_columns.append(j)
+
+                    for j in range(chunk.shape[0] // self.batchsize):
+                        yield (chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, data_columns].values,
+                        chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values)
+                        current_index += self.batchsize
+            
     def next_batch(self):
         """
         Load the next random batch from the loaded data file
@@ -53,14 +67,6 @@ class FastDataHandler():
         @rtype Tuple
         """
         # Load the data for the next batch
-        batch = next(self.batches)
-
-        # Separate the data into the returned frames
-        data_columns = [column for column in batch.columns 
-                if column.split('_')[0] in ['laser','target'] and not column.split('_')[1] == 'id']
-
-        return (batch[data_columns].values,batch[['linear_x','angular_z']].values)
-            
-
+        return next(self.batches)
 
         
