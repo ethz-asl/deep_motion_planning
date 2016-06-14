@@ -36,28 +36,28 @@ class FastDataHandler():
 
         data_columns = None
         cmd_columns = None
-        with pd.HDFStore(self.filepath, mode='r') as store:
-            while True:
-                current_index = 0
-                for i in range(self.nrows // self.chunksize):
+        while True:
+            current_index = 0
+            for i in range(self.nrows // self.chunksize):
+                with pd.HDFStore(self.filepath, mode='r') as store:
                     chunk = store.select('data',
                             start=i*self.chunksize, stop=(i+1)*self.chunksize)
-                    chunk = chunk.reindex(np.random.permutation(chunk.index))
+                chunk = chunk.reindex(np.random.permutation(chunk.index))
 
-                    if not data_columns:
-                        data_columns = list()
-                        cmd_columns = list()
-                        for j,column in enumerate(chunk.columns):
-                            if column.split('_')[0] in ['laser','target']\
-                                and not column.split('_')[1] == 'id':
-                                data_columns.append(j)
-                            if column in ['linear_x','angular_z']:
-                                cmd_columns.append(j)
+                if not data_columns:
+                    data_columns = list()
+                    cmd_columns = list()
+                    for j,column in enumerate(chunk.columns):
+                        if column.split('_')[0] in ['laser','target']\
+                            and not column.split('_')[1] == 'id':
+                            data_columns.append(j)
+                        if column in ['linear_x','angular_z']:
+                            cmd_columns.append(j)
 
-                    for j in range(chunk.shape[0] // self.batchsize):
-                        yield (chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, data_columns].values,
-                        chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values)
-                        current_index += self.batchsize
+                for j in range(chunk.shape[0] // self.batchsize):
+                    yield (chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, data_columns].values,
+                    chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values)
+                    current_index += self.batchsize
             
     def next_batch(self):
         """
