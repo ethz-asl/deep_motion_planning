@@ -1,4 +1,3 @@
-
 import _init_paths
 
 import argparse
@@ -37,8 +36,8 @@ def parse_args():
 
 def placeholder_inputs(data_size, batch_size):
     """Create placeholders for the tf graph"""
-    data_placeholder = tf.placeholder(tf.float32, shape=None)
-    cmd_placeholder = tf.placeholder(tf.float32, shape=None)
+    data_placeholder = tf.placeholder(tf.float32, shape=[None, 723])
+    cmd_placeholder = tf.placeholder(tf.float32, shape=[None, 2])
 
     return data_placeholder, cmd_placeholder
 
@@ -50,9 +49,9 @@ def run_training(args):
 
     with tf.Graph().as_default():
 
-        learning_rate = tf.Variable(args.learning_rate, trainable=False)
+        global_step, learning_rate = model.learning_rate(args.learning_rate)
 
-        data_handler_train = FastDataHandler(args.datafile_train, args.batch_size)
+        data_handler_train = FastDataHandler(args.datafile_train, args.batch_size, 32768)
 
         data_placeholder, cmd_placeholder = placeholder_inputs(model.INPUT_SIZE, args.batch_size)
 
@@ -60,7 +59,7 @@ def run_training(args):
 
         loss, loss_split = model.loss(prediction, cmd_placeholder)
 
-        train_op = model.training(loss, loss_split, learning_rate)
+        train_op = model.training(loss, loss_split, learning_rate, global_step)
 
         evaluation, evaluation_split = model.evaluation(prediction, cmd_placeholder)
 
@@ -86,6 +85,8 @@ def run_training(args):
 
                 (X,Y) = data_handler_train.next_batch()
 
+                load_duration = time.time() - start_time
+
                 feed_dict = {data_placeholder: X, cmd_placeholder: Y}
 
                 _, loss_value, loss_split_value = sess.run([train_op, loss, loss_split], feed_dict=feed_dict)
@@ -94,8 +95,8 @@ def run_training(args):
 
                 if step > 0 and step % 100 == 0:
                     # Print status to stdout.
-                    logger.info('Step {}: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(step,
-                        loss_split_value[0], loss_split_value[1], duration/1e-3))
+                    logger.info('Step {}: loss = ({:.4f},{:.4f}) {:.3f} msec (load: {:.3f} msec)'.format(step,
+                        loss_split_value[0], loss_split_value[1], duration/1e-3, load_duration/1e-3))
                     summary_str = sess.run(summary_op, feed_dict=feed_dict)
                     summary_writer.add_summary(summary_str, step)
                     summary_writer.flush()
@@ -104,17 +105,22 @@ def run_training(args):
                     # Evaluate model
                     logger.info('Evaluate model')
                     evaluate_model(sess, evaluation, evaluation_split, data_placeholder,
-                            cmd_placeholder, eval_summary_op, step, args.datafile_eval,
-                            4*8192, writer=eval_summary_writer)
+                            cmd_placeholder, eval_summary_op, args.datafile_eval,
+                            4*8192)
+                    eval_summary_writer.add_summary(summary_str, step)
+                    eval_summary_writer.flush()
 
-                if step > 0 and step % 1000 == 0 or step == args.max_steps:
+                if step > 0 and step % 1000 == 0:
                     # Save a checkpoint
                     logger.info('Save model snapshot')
                     filename = os.path.join(storage_path, 'snap')
                     saver.save(sess, filename, global_step=step)
 
+            filename = os.path.join(storage_path, 'final.ckpt')
+            saver.save(sess, filename)
+
 def evaluate_model(sess, evaluation, evaluation_split, data_placeholder, cmd_placeholder,
-        summary_op, step, datafile_eval, eval_n_elements, writer=None):
+        summary_op, datafile_eval, eval_n_elements):
 
     data_handler_eval = FastDataHandler(datafile_eval, eval_n_elements, eval_n_elements)
 
@@ -123,9 +129,7 @@ def evaluate_model(sess, evaluation, evaluation_split, data_placeholder, cmd_pla
     feed_dict = {data_placeholder: X, cmd_placeholder: Y}
     loss_value, loss_split_value = sess.run([evaluation, evaluation_split], feed_dict=feed_dict)
 
-    summary_str = sess.run(summary_op, feed_dict=feed_dict)
-    writer.add_summary(summary_str, step)
-    writer.flush()
+    return sess.run(summary_op, feed_dict=feed_dict)
 
 def main():
     logger = logging.getLogger(__name__)

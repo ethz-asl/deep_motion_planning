@@ -9,6 +9,13 @@ INPUT_SIZE = 723
 CMD_SIZE = 2
 
 HIDDEN_1 = 500
+HIDDEN_2 = 250
+
+def learning_rate(initial):
+    global_step = tf.Variable(0, name='global_step', trainable=False)
+    learning_rate = tf.train.exponential_decay(initial, global_step, 
+            100000, 0.96, staircase=True)
+    return global_step, learning_rate
 
 def inference(data):
     weights_hidden = tf.Variable(
@@ -29,9 +36,8 @@ def loss(prediction, cmd):
 
     return loss, loss_split
 
-def training(loss, loss_split, learning_rate):
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-    global_step = tf.Variable(0, name='global_step', trainable=False)
+def training(loss, loss_split, learning_rate, global_step):
+    optimizer = tf.train.MomentumOptimizer(learning_rate, 0.9)
     train_op = optimizer.minimize(loss, global_step=global_step)
 
     return train_op
