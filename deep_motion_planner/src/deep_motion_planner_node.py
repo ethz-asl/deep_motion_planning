@@ -8,9 +8,8 @@ def main():
     
     rospy.init_node('deep_motion_planner')
 
-    planner = DeepMotionPlanner()
-
-    rospy.spin()
+    with DeepMotionPlanner() as planner:
+        rospy.spin()
 
 if __name__ == "__main__":
     main()
