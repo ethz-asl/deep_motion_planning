@@ -26,6 +26,7 @@ class MissionControl():
         
         # Load a mission and parse the file
         mission_file = rospy.get_param('~mission_file')
+        deep_motion_planner = rospy.get_param('~deep_motion_planner', default=False)
         if not os.path.exists(mission_file):
             rospy.logerr('Mission file not found: {}'.format(mission_file))
             exit()
@@ -52,8 +53,11 @@ class MissionControl():
         self.costmap_update_sub = rospy.Subscriber('/move_base/global_costmap/costmap_updates', \
                 OccupancyGridUpdate, self.__costmap_update_callback__)
 
-        # connect to the action api of the move_base package
-        self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        if deep_motion_planner:
+            self.navigation_client = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
+        else:
+            # connect to the action api of the move_base package
+            self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
         while not self.navigation_client.wait_for_server(rospy.Duration(5)):
             rospy.loginfo('Waiting for move_base action server')
@@ -282,7 +286,7 @@ class MissionControl():
             return self.costmap.data[int(x_pixel + self.costmap.info.width * y_pixel)] < threshold
         else:
             rospy.logwarn('No costmap available')
-            return False
+            return True
 
     def __reset_simulation__(self):
         """
