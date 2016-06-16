@@ -51,7 +51,7 @@ def run_training(args):
 
         global_step, learning_rate = model.learning_rate(args.learning_rate)
 
-        data_handler_train = FastDataHandler(args.datafile_train, args.batch_size, 32768)
+        data_handler_train = FastDataHandler(args.datafile_train, args.batch_size, 2**18)
 
         data_placeholder, cmd_placeholder = placeholder_inputs(model.INPUT_SIZE, args.batch_size)
 

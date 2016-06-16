@@ -23,7 +23,7 @@ data:
 train:
 	python src/model/train_model.py data/processed/$(DATASET).h5 \
 				 													data/processed/$(DATASET_EVAL).h5 \
-				 													-l 0.0005 -s 2000000 -b 64
+				 													-l 0.005 -s 2000000 -b 128
 
 clean:
 	find . -name "*.pyc" -exec rm {} \;
