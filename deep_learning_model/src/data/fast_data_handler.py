@@ -5,12 +5,12 @@ import numpy as np
 
 class FastDataHandler():
     """Class to load data from HDF5 storages in a random and chunckwise manner"""
-    def __init__(self, filepath, batchsize = 16, chunksize=8192):
+    def __init__(self, filepath, batchsize = 16, chunksize=None):
         self.filepath = filepath
         self.chunksize = chunksize
         self.batchsize = batchsize
 
-        if not chunksize % batchsize == 0:
+        if chunksize and not chunksize % batchsize == 0:
             raise IOError('chunksize must be divisible by batchsize')
 
         if not os.path.exists(filepath):
@@ -20,9 +20,12 @@ class FastDataHandler():
         with pd.HDFStore(filepath, mode='r') as store:
             self.nrows = store.get_storer('data').nrows
 
-        # Make sure, we can return a chunk with the correct size
-        if chunksize > self.nrows:
-            raise ValueError('Chunksize is to large for the dataset: {} chunks > {} rows'.format(chunksize, self.nrows))
+        # No chunksize specified, load the entire dataset
+        if not self.chunksize:
+            self.chunksize = self.nrows
+            self.use_chunks = False
+        else:
+            self.use_chunks = True
 
         self.batches = self.__generate_next_batch__()
 
@@ -39,9 +42,14 @@ class FastDataHandler():
         while True:
             current_index = 0
             for i in range(self.nrows // self.chunksize):
+
                 with pd.HDFStore(self.filepath, mode='r') as store:
-                    chunk = store.select('data',
-                            start=i*self.chunksize, stop=(i+1)*self.chunksize)
+                    if self.use_chunks:
+                        chunk = store.select('data',
+                                start=i*self.chunksize, stop=(i+1)*self.chunksize)
+                    else:
+                        chunk = store.select('data')
+
                 chunk = chunk.reindex(np.random.permutation(chunk.index))
 
                 if not data_columns:
