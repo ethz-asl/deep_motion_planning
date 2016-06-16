@@ -2,13 +2,14 @@
   <!-- Specifies if we use the deep motion planning or the classic approach -->
   <arg name="deep_motion_planning" default="True" />
 
+  <node name="fake_localization" pkg="fake_localization" type="fake_localization" respawn="false" />
+    
   <group if="$(arg deep_motion_planning)" >
     <include file="$(find deep_motion_planner)/launch/deep_motion_planner.launch" />
   </group>
 
 
   <group unless="$(arg deep_motion_planning)" >
-    <node name="fake_localization" pkg="fake_localization" type="fake_localization" respawn="false" />
 
   <!--
     <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
