@@ -10,6 +10,8 @@ import tf
 
 import threading, time
 
+from tensorflow_wrapper import TensorflowWrapper
+
 class DeepMotionPlanner():
     """Use a deep neural network for motion planning"""
     def __init__(self):
@@ -20,7 +22,7 @@ class DeepMotionPlanner():
        
         # ROS topics
         scan_sub = rospy.Subscriber('scan', LaserScan, self.scan_callback)
-        self.cmd_pub  = rospy.Publisher('/cmd', Twist, queue_size=1)
+        self.cmd_pub  = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
         self._as = actionlib.SimpleActionServer('deep_move_base',
                 MoveBaseAction, auto_start =
@@ -48,30 +50,33 @@ class DeepMotionPlanner():
         self.last_scan = data
 
     def processing_data(self):
-        next_call = time.time()
-        while not self.interrupt_event.is_set():
+        with TensorflowWrapper() as tf_wrapper:
+            next_call = time.time()
+            while not self.interrupt_event.is_set():
 
-            next_call = next_call+1.0/self.freq
-            time.sleep(next_call - time.time())
+                next_call = next_call+1.0/self.freq
+                time.sleep(next_call - time.time())
 
-            if not self._as.is_active():
-                continue
+                if not self._as.is_active():
+                    continue
 
-            if not self.target_pose or not self.last_scan:
-                continue
+                if not self.target_pose or not self.last_scan:
+                    continue
 
-            target = self.compute_relative_target()
-            if not target:
-                continue
-                    
-            input_data = list(self.last_scan.ranges) + list(target)
+                target = self.compute_relative_target()
+                if not target:
+                    continue
+                        
+                input_data = list(self.last_scan.ranges) + list(target)
 
-            # TODO Call network
+                linear_x, angular_z = tf_wrapper.inference(input_data)
 
-            cmd = Twist()
-            self.cmd_pub.publish(cmd)
+                cmd = Twist()
+                cmd.linear.x = linear_x
+                cmd.angular.z = angular_z
+                self.cmd_pub.publish(cmd)
 
-            self.check_goal_reached(target)
+                self.check_goal_reached(target)
 
     def check_goal_reached(self, target):
         """
