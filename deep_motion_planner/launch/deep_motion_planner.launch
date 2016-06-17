@@ -2,5 +2,8 @@
   <node name="deep_motion_planner" pkg="deep_motion_planner" type="deep_motion_planner_node.py"
   output="screen">
     <remap from="scan" to="base_scan"/>
+    <param name="model_path" type="string" value="$(find deep_motion_planner)/../deep_learning_model/models/2016-06-15_14-28_two_fully_connected/" />
+    <param name="use_checkpoints" type="bool" value="True" />
+    <param name="protobuf_file" type="string" value="graph.pb" />
   </node>
 </launch>

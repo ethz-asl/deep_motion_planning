@@ -35,7 +35,7 @@ def inference(data):
     hidden_1 = tf.nn.relu(tf.add(tf.matmul(data, weights_hidden1), biases_hidden1))
     hidden_2 = tf.nn.relu(tf.add(tf.matmul(hidden_1, weights_hidden2), biases_hidden2))
     hidden_3 = tf.nn.relu(tf.add(tf.matmul(hidden_2, weights_hidden3), biases_hidden3))
-    prediction = tf.add(tf.matmul(hidden_3, weights_out), biases_out)
+    prediction = tf.add(tf.matmul(hidden_3, weights_out), biases_out, name='prediction')
 
     return prediction
 

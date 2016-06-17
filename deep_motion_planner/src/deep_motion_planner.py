@@ -9,6 +9,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseFeedback, MoveBaseResult
 import tf
 
 import threading, time
+import os
 
 from tensorflow_wrapper import TensorflowWrapper
 
@@ -19,6 +20,22 @@ class DeepMotionPlanner():
         self.target_pose = None
         self.last_scan = None
         self.freq = 25.0
+
+        if not rospy.has_param('~model_path'):
+            rospy.logerr('Missing parameter: ~model_path')
+            exit()
+
+        self.model_path = rospy.get_param('~model_path')
+        self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
+        self.use_checkpoints = rospy.get_param('~use_checkpoints', False)
+        if not os.path.exists(self.model_path):
+            rospy.logerr('Model path does not exist: {}'.format(self.model_path))
+            rospy.logerr('Please check the parameter: {}'.format(rospy.resolve_name('~model_path')))
+            exit()
+        if not os.path.exists(os.path.join(self.model_path, self.protobuf_file)):
+            rospy.logerr('Protobuf file does not exist: {}'.format(os.path.join(self.model_path, self.protobuf_file)))
+            rospy.logerr('Please check the parameter: {}'.format(rospy.resolve_name('~protobuf_file')))
+            exit()
        
         # ROS topics
         scan_sub = rospy.Subscriber('scan', LaserScan, self.scan_callback)
@@ -50,7 +67,7 @@ class DeepMotionPlanner():
         self.last_scan = data
 
     def processing_data(self):
-        with TensorflowWrapper() as tf_wrapper:
+        with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints) as tf_wrapper:
             next_call = time.time()
             while not self.interrupt_event.is_set():
 

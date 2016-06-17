@@ -36,7 +36,7 @@ def parse_args():
 
 def placeholder_inputs(data_size, batch_size):
     """Create placeholders for the tf graph"""
-    data_placeholder = tf.placeholder(tf.float32, shape=[None, 723])
+    data_placeholder = tf.placeholder(tf.float32, shape=[None, 723], name='data_input')
     cmd_placeholder = tf.placeholder(tf.float32, shape=[None, 2])
 
     return data_placeholder, cmd_placeholder
@@ -80,6 +80,8 @@ def run_training(args):
             summary_writer = tf.train.SummaryWriter(os.path.join(storage_path, 'train'), sess.graph)
             eval_summary_writer = tf.train.SummaryWriter(os.path.join(storage_path, 'eval'), sess.graph)
 
+            tf.train.write_graph(sess.graph_def, os.path.join(storage_path), "graph.pb", False) #proto
+
             for step in range(args.max_steps):
                 start_time = time.time()
 
@@ -116,7 +118,7 @@ def run_training(args):
                     filename = os.path.join(storage_path, 'snap')
                     saver.save(sess, filename, global_step=step)
 
-            filename = os.path.join(storage_path, 'final.ckpt')
+            filename = os.path.join(storage_path, 'final')
             saver.save(sess, filename)
 
 def evaluate_model(sess, evaluation, evaluation_split, data_placeholder, cmd_placeholder,
