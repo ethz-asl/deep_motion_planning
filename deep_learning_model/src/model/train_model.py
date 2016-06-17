@@ -118,8 +118,18 @@ def run_training(args):
                     filename = os.path.join(storage_path, 'snap')
                     saver.save(sess, filename, global_step=step)
 
+            logger.info('Save final model snapshot')
             filename = os.path.join(storage_path, 'final')
             saver.save(sess, filename)
+
+            # Save the model with weights in one file
+            logger.info('Save final model with weights')
+            output_node_names = 'prediction'
+            output_graph_def = tf.python.client.graph_util.convert_variables_to_constants(
+                    sess, sess.graph_def, output_node_names.split(","))
+            with tf.gfile.GFile(os.path.join(storage_path, 'model.pb'), "wb") as f:
+                    f.write(output_graph_def.SerializeToString())
+                    logger.info("{} ops in the final graph.".format(len(output_graph_def.node)))
 
 def evaluate_model(sess, evaluation, evaluation_split, data_placeholder, cmd_placeholder,
         summary_op, datafile_eval, eval_n_elements):
