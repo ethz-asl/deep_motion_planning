@@ -5,14 +5,15 @@ The repository contains various ROS packages that are used to generate the train
 
 ## Usage
 
+### With Move Base
 In order to start the simulation, the navigation and load the static map, run:
 ```
-roslaunch stage_worlds shapes.launch
+roslaunch stage_worlds shapes.launch deep_motion_planning:=False
 ```
 
 You can then start a mission by executing:
 ```
-rosrun mission_control mission_control_node.py _mission_file:=src/deep_motion_planning/mission_control/missions/rooms.txt
+rosrun mission_control mission_control_node.py _mission_file:=src/deep_motion_planning/mission_control/missions/rooms.txt _deep_motion_planner:=False
 ```
 The parameter <_mission_file> defines the path to the mission definition that you want to execute. 
 The example above assumes that you are in the top folder of your catkin workspace.
@@ -21,6 +22,19 @@ Finally, if you want to see a visualization of the system, run:
 ```
 roslaunch stage_worlds rviz.launch
 ```
+
+### With Deep Motion Planner
+To start the simulation in combination with the deep motion planner, run:
+```
+roslaunch stage_worlds shapes.launch deep_motion_planning:=True
+```
+
+You can then start a mission by executing:
+```
+rosrun mission_control mission_control_node.py _mission_file:=src/deep_motion_planning/mission_control/missions/rooms.txt _deep_motion_planner:=True
+```
+The parameter <_mission_file> defines the path to the mission definition that you want to execute. 
+The example above assumes that you are in the top folder of your catkin workspace.
 
 ## Packages
 ### stage_worlds
@@ -37,3 +51,12 @@ in the package directory.
 The data_capture node subscribes to a set of topics and writes the time-synchronized messages
 into a .csv file. Currently, the node records data from a laser scanner, the relative target 
 pose for the navigation and the control commands that are send to the robot.
+
+### deep_motion_planner
+The package wraps a Tensorflow model for motion planning with a deep neural network. The node loads
+a pretrained model and computes the control commands for the robot from raw sensor data.
+
+### deep_learning_model
+This is not a ROS package, but a independent project to train a Tensorflow model on data that is
+captured with the *data_capture* package. The resulting trained model can then be loaded and executed
+in the *deep_motion_planner* package
