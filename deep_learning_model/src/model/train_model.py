@@ -26,6 +26,7 @@ def parse_args():
     parser.add_argument('datafile_eval', help='Filename of the evaluation data', type=lambda
             s:check_extension(['.h5'],s))
     parser.add_argument('-s', '--max_steps', help='Number of batches to run', type=int, default=1000000)
+    parser.add_argument('-e', '--eval_steps', help='Evaluate model every N steps', type=int, default=1000)
     parser.add_argument('-b', '--batch_size', help='Size of training batches', type=int,  default=16)
     parser.add_argument('-t', '--train_dir', help='Directory to save the model snapshots',
             default='./models/default')
@@ -82,6 +83,9 @@ def run_training(args):
 
             tf.train.write_graph(sess.graph_def, os.path.join(storage_path), "graph.pb", False) #proto
 
+            # Vector to average the duration over the last report steps
+            duration_vector = [0.0] * (args.eval_steps // 100)
+
             for step in range(args.max_steps):
                 start_time = time.time()
 
@@ -95,6 +99,7 @@ def run_training(args):
 
                 duration = time.time() - start_time
 
+                # Report every 100 steps
                 if step > 0 and step % 100 == 0:
                     # Print status to stdout.
                     logger.info('Step {}: loss = ({:.4f},{:.4f}) {:.3f} msec (load: {:.3f} msec)'.format(step,
@@ -103,14 +108,28 @@ def run_training(args):
                     summary_writer.add_summary(summary_str, step)
                     summary_writer.flush()
 
-                if step > 0 and step % 1000 == 0 or step == args.max_steps:
+                    # Replace the durations in fifo fashion
+                    duration_vector[((step % args.eval_steps)//100)] = duration
+
+                if step > 0 and step % args.eval_steps == 0 or step == args.max_steps:
                     # Evaluate model
-                    logger.info('Evaluate model')
-                    evaluate_model(sess, evaluation, evaluation_split, data_placeholder,
+                    start_eval = time.time()
+
+                    summary_str, loss_split_value = evaluate_model(sess, evaluation, evaluation_split, data_placeholder,
                             cmd_placeholder, eval_summary_op, args.datafile_eval,
                             4*8192)
+
+                    duration_eval = time.time() - start_eval
+                    logger.info('Evaluattion: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
+
                     eval_summary_writer.add_summary(summary_str, step)
                     eval_summary_writer.flush()
+
+                    # Estimate the time left from the mean durations
+                    combined_duration = (sum(duration_vector)/len(duration_vector)) + duration_eval * (args.max_steps - step) // args.eval_steps
+                    h,m = divmod(duration * (args.max_steps - step),60)
+                    d,h = divmod(h, 24)
+                    logger.info('Time left: {:.0f}:{:02.0f}:{:02.0f}'.format(d,h,m))
 
                 if step > 0 and step % 1000 == 0:
                     # Save a checkpoint
@@ -141,7 +160,7 @@ def evaluate_model(sess, evaluation, evaluation_split, data_placeholder, cmd_pla
     feed_dict = {data_placeholder: X, cmd_placeholder: Y}
     loss_value, loss_split_value = sess.run([evaluation, evaluation_split], feed_dict=feed_dict)
 
-    return sess.run(summary_op, feed_dict=feed_dict)
+    return sess.run(summary_op, feed_dict=feed_dict), loss_split_value
 
 def main():
     logger = logging.getLogger(__name__)
