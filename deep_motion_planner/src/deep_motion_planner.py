@@ -21,6 +21,7 @@ class DeepMotionPlanner():
         self.last_scan = None
         self.freq = 25.0
 
+        # Load various ROS parameters
         if not rospy.has_param('~model_path'):
             rospy.logerr('Missing parameter: ~model_path')
             exit()
@@ -41,15 +42,16 @@ class DeepMotionPlanner():
         scan_sub = rospy.Subscriber('scan', LaserScan, self.scan_callback)
         self.cmd_pub  = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
+        # We over the same action api as the move base package
         self._as = actionlib.SimpleActionServer('deep_move_base',
                 MoveBaseAction, auto_start =
                 False)
         self._as.register_goal_callback(self.goal_callback)
         self._as.register_preempt_callback(self.preempt_callback)
 
-        self.transform_broadcaster = tf.TransformBroadcaster()
         self.transform_listener = tf.TransformListener()
 
+        # Use a separate thread to process the received data
         self.interrupt_event = threading.Event()
         self.processing_thread = threading.Thread(target=self.processing_data)
 
@@ -60,30 +62,46 @@ class DeepMotionPlanner():
         return self
       
     def __exit__(self, exc_type, exc_value, traceback):
+        # Make sure to stop the thread properly
         self.interrupt_event.set()
         self.processing_thread.join()
 
     def scan_callback(self, data):
+        """
+        Callback function for the laser scan messages
+        """
         self.last_scan = data
 
     def processing_data(self):
+        """
+        Process the received sensor data and publish a new command
+
+        The function does not return, it is used as thread function and
+        runs until the interrupt_event is set
+        """
+        # Get a handle for the tensorflow interface
         with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints) as tf_wrapper:
             next_call = time.time()
+            # Stop if the interrupt is requested
             while not self.interrupt_event.is_set():
 
+                # Run processing with the correct frequency
                 next_call = next_call+1.0/self.freq
                 time.sleep(next_call - time.time())
 
+                # Make sure, we have goal
                 if not self._as.is_active():
                     continue
-
+                # Make sure, we received the first laser scan message
                 if not self.target_pose or not self.last_scan:
                     continue
-
+                # Get the relative target pose
                 target = self.compute_relative_target()
                 if not target:
                     continue
                         
+                # Prepare the input vector, perform the inference on the model 
+                # and publish a new command
                 input_data = list(self.last_scan.ranges) + list(target)
 
                 linear_x, angular_z = tf_wrapper.inference(input_data)
@@ -93,6 +111,7 @@ class DeepMotionPlanner():
                 cmd.angular.z = angular_z
                 self.cmd_pub.publish(cmd)
 
+                # Check if the goal pose is reached
                 self.check_goal_reached(target)
 
     def check_goal_reached(self, target):
@@ -107,19 +126,19 @@ class DeepMotionPlanner():
                 and abs(target[2]) < orientation_tolerance:
             self._as.set_succeeded()
 
-
     def compute_relative_target(self):
         """
         Compute the target pose in the base_link frame and publish the current pose of the robot
         """
         try:
+            # Get the base_link transformation
             (base_position,base_orientation) = self.transform_listener.lookupTransform('/map', '/base_link',
                                                                     rospy.Time())
         except (tf.LookupException, tf.ConnectivityException,
                         tf.ExtrapolationException):
             return None
 
-        # Publish feedback
+        # Publish feedback (the current pose)
         feedback = MoveBaseFeedback()
         feedback.base_position.header.stamp = rospy.Time().now()
         feedback.base_position.pose.position.x = base_position[0]
@@ -131,9 +150,11 @@ class DeepMotionPlanner():
         feedback.base_position.pose.orientation.w = base_orientation[3]
         self._as.publish_feedback(feedback)
 
+        # Compute the relative goal position
         goal_position_difference = [self.target_pose.target_pose.pose.position.x - feedback.base_position.pose.position.x,
                                     self.target_pose.target_pose.pose.position.y - feedback.base_position.pose.position.y]
 
+        # Get the current orientation and the goal orientation
         current_orientation = feedback.base_position.pose.orientation
         p = [current_orientation.x, current_orientation.y, current_orientation.z, \
                 current_orientation.w]
@@ -155,10 +176,16 @@ class DeepMotionPlanner():
         return (goal_position_base_frame[0], -goal_position_base_frame[1], yaw)
 
     def goal_callback(self):
+        """
+        Callback function when a new goal pose is requested
+        """
         goal = self._as.accept_new_goal()
         self.target_pose = goal
 
     def preempt_callback(self):
+        """
+        Callback function when the current action is preempted
+        """
         rospy.logerr('Action preempted')
         self._as.set_preempted(result=None, text='External preemption')
 
