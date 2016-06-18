@@ -1,4 +1,6 @@
-
+"""
+Add the src directory to the Python path
+"""
 import os
 import sys
     

@@ -46,10 +46,12 @@ def run_training(args):
     """Train a tensorflow model"""
     logger = logging.getLogger(__name__)
 
+    # Folder where to store snapshots, meta data and the final model
     storage_path = os.path.join(args.train_dir, (time.strftime('%Y-%m-%d_%H-%M_') + model.NAME))
 
     with tf.Graph().as_default():
 
+        # Define the used machine learning model
         global_step, learning_rate = model.learning_rate(args.learning_rate)
 
         data_handler_train = FastDataHandler(args.datafile_train, args.batch_size, 2**18)
@@ -64,6 +66,7 @@ def run_training(args):
 
         evaluation, evaluation_split = model.evaluation(prediction, cmd_placeholder)
 
+        # Variables to use in the summary (shown in tensorboard)
         tf.scalar_summary('loss', loss)
         tf.scalar_summary('loss_linear_x', loss_split[0])
         tf.scalar_summary('loss_angular_yaw', loss_split[1])
@@ -72,27 +75,33 @@ def run_training(args):
         summary_op = tf.merge_all_summaries()
         eval_summary_op = tf.merge_all_summaries()
 
+        # Saver for model snapshots
         saver = tf.train.Saver()
             
         with tf.Session() as sess:
         
             sess.run(tf.initialize_all_variables())
 
+            # Save summaries for training and evaluation in separate folders
             summary_writer = tf.train.SummaryWriter(os.path.join(storage_path, 'train'), sess.graph)
             eval_summary_writer = tf.train.SummaryWriter(os.path.join(storage_path, 'eval'), sess.graph)
 
+            # Save the tensorflow graph definition as protobuf file (does not include weights)
             tf.train.write_graph(sess.graph_def, os.path.join(storage_path), "graph.pb", False) #proto
 
             # Vector to average the duration over the last report steps
             duration_vector = [0.0] * (args.eval_steps // 100)
 
+            # Perform all training steps
             for step in range(args.max_steps):
                 start_time = time.time()
 
+                # Get a new data batch
                 (X,Y) = data_handler_train.next_batch()
 
                 load_duration = time.time() - start_time
 
+                # Feed it into the network and perform the optimization
                 feed_dict = {data_placeholder: X, cmd_placeholder: Y}
 
                 _, loss_value, loss_split_value = sess.run([train_op, loss, loss_split], feed_dict=feed_dict)
@@ -111,10 +120,13 @@ def run_training(args):
                     # Replace the durations in fifo fashion
                     duration_vector[((step % args.eval_steps)//100)] = duration
 
+                # Evaluatie the model
                 if step > 0 and step % args.eval_steps == 0 or step == args.max_steps:
-                    # Evaluate model
                     start_eval = time.time()
 
+                    # Evaluate the model. We use only a constant fraction of the entire dataset to
+                    # reduce the computation time, yet get a rough estimate of the model's
+                    # generalization performance
                     summary_str, loss_split_value = evaluate_model(sess, evaluation, evaluation_split, data_placeholder,
                             cmd_placeholder, eval_summary_op, args.datafile_eval,
                             4*8192)
@@ -142,6 +154,10 @@ def run_training(args):
             saver.save(sess, filename)
 
             # Save the model with weights in one file
+            # This will only capture the operations used to generate the prediction. It also
+            # replaces the variables with the weights from training as constant values 
+            # See:
+            # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/freeze_graph.py
             logger.info('Save final model with weights')
             output_node_names = 'prediction'
             output_graph_def = tf.python.client.graph_util.convert_variables_to_constants(
@@ -152,6 +168,9 @@ def run_training(args):
 
 def evaluate_model(sess, evaluation, evaluation_split, data_placeholder, cmd_placeholder,
         summary_op, datafile_eval, eval_n_elements):
+    """
+    Evaluate the model on a separate data file. 
+    """
 
     data_handler_eval = FastDataHandler(datafile_eval, eval_n_elements, eval_n_elements)
 
@@ -168,9 +187,6 @@ def main():
 
     args = parse_args()
     logger.info(args.datafile_train)
-
-    # Open data handler
-    project_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
 
     logger.info('Start training')
     run_training(args)

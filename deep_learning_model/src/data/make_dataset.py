@@ -32,14 +32,17 @@ def main(project_dir):
 
     args = parse_args()
 
+    # Generate a list with all the csv files in the input folder
     path = os.path.join(project_dir, args.input_path)
     all_files = [os.path.join(path,f) for f in os.listdir(path) 
                          if os.path.isfile(os.path.join(path, f)) and f.split('.')[-1] == 'csv']
 
+    # Sort them by the integer number
     all_files.sort(key=lambda x: int(os.path.basename(x).split('_')[-1].split('.')[0]))
 
     target_file = os.path.join(project_dir, 'data', 'processed', args.output_file)
 
+    # Do not overwrite existing data containers
     if os.path.exists(target_file):
         logger.error('Target file already exists: {}'.format(target_file))
         exit()
@@ -47,10 +50,12 @@ def main(project_dir):
     with pd.HDFStore(target_file) as store:
         num_elements = 0
 
+        # Iterate over all input files and add them to the HDF5 container
         for i,f in enumerate(all_files):
             print('({}/{}) {}'.format(i, len(all_files), f), end='\r')
             current = pd.read_csv(f)
 
+            # Make sure the final dataframe has a continous index
             current['original_index'] = current.index
             current['target_id'] = i+1
             current.index = pd.Series(current.index) + num_elements

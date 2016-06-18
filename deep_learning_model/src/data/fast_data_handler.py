@@ -10,6 +10,7 @@ class FastDataHandler():
         self.chunksize = chunksize
         self.batchsize = batchsize
 
+        # Check if the parameters are valid
         if chunksize and not chunksize % batchsize == 0:
             raise IOError('chunksize must be divisible by batchsize')
 
@@ -36,13 +37,16 @@ class FastDataHandler():
         return self.nrows // self.batchsize
 
     def __generate_next_batch__(self):
-
+        """
+        Generator for the single batches
+        """
         data_columns = None
         cmd_columns = None
         while True:
             current_index = 0
             for i in range(self.nrows // self.chunksize):
 
+                # Load the next chunk of data from the HDF5 container
                 with pd.HDFStore(self.filepath, mode='r') as store:
                     if self.use_chunks:
                         chunk = store.select('data',
@@ -50,8 +54,10 @@ class FastDataHandler():
                     else:
                         chunk = store.select('data')
 
+                # Shuffle the data
                 chunk = chunk.reindex(np.random.permutation(chunk.index))
 
+                # On the first call, get the column indecies for the input data and the commands
                 if not data_columns:
                     data_columns = list()
                     cmd_columns = list()
@@ -62,6 +68,7 @@ class FastDataHandler():
                         if column in ['linear_x','angular_z']:
                             cmd_columns.append(j)
 
+                # Return the batches from the current data chunk that is in memory
                 for j in range(chunk.shape[0] // self.batchsize):
                     yield (chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, data_columns].values,
                     chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values)
