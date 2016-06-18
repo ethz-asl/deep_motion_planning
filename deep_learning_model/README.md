@@ -1,10 +1,32 @@
-deep_learning_model
-==============================
+# deep_learning_model
 
 Learn how to navigate in urban environments with deep learning
 
-Project Organization
-------------
+## Usage
+### Data Generation
+Run:
+```
+make data
+```
+to take the single .csv files and generate a single HDF5 container with the entire data. Please
+refer to the Makefile to change the files and folders that are used for the data preparation.
+
+### Train a Model
+```
+make train
+```
+This will start the training of your model. Please refer to the Makefile to change the files and folders
+that are used during training. Furthermore, we set some metaparameters (initial learning rate,
+maximum number of steps and the batch size) in this file.
+
+### Tensorboard
+
+```
+make tensorboard
+```
+This will start Googles Tensorboard with the ./models/default folder as log directory.
+
+## Project Organization
 
     ├── LICENSE
     ├── Makefile           <- Makefile with commands like `make data` or `make train`
