@@ -10,19 +10,19 @@ class TensorflowWrapper():
     use it on live sensor data
     """
     def __init__(self, storage_path, protobuf_file='graph.pb', use_checkpoints=False):
-       """Initialize a new TensorflowWrapper object
-       
-       @param storage_path: The path to the protobuf_file and the snapshots
-       @type  :  string
-       
-       @param protobuf_file: The protobuf file to load
-       @type  :  string
-       
-       @param use_checkpoints: If the given protobuf_file does not contain the trained weights, you
-                                can use checkpoint files to initialize the weights
-       @type  :  bool
-       
-       """ 
+        """Initialize a new TensorflowWrapper object
+        
+        @param storage_path: The path to the protobuf_file and the snapshots
+        @type  :  string
+        
+        @param protobuf_file: The protobuf file to load
+        @type  :  string
+        
+        @param use_checkpoints: If the given protobuf_file does not contain the trained weights, you
+                                    can use checkpoint files to initialize the weights
+        @type  :  bool
+        
+        """ 
         # Load the graph definition from a binary protobuf file
         with gfile.FastGFile(os.path.join(storage_path, protobuf_file),'rb') as f:
             graph_def = tf.GraphDef()
