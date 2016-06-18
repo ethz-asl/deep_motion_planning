@@ -87,7 +87,11 @@ class DeepMotionPlanner():
 
                 # Run processing with the correct frequency
                 next_call = next_call+1.0/self.freq
-                time.sleep(next_call - time.time())
+                sleep_time = next_call - time.time()
+                if sleep_time > 0.0:
+                    time.sleep(sleep_time)
+                else:
+                    rospy.logerr('Missed control loop frequency')
 
                 # Make sure, we have goal
                 if not self._as.is_active():
