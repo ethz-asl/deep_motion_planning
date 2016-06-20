@@ -5,6 +5,7 @@ import logging
 import os
 import time
 
+import numpy as np
 import tensorflow as tf
 
 from data.data_handler import DataHandler
@@ -87,7 +88,7 @@ def run_training(args):
             eval_summary_writer = tf.train.SummaryWriter(os.path.join(storage_path, 'eval'), sess.graph)
 
             # Save the tensorflow graph definition as protobuf file (does not include weights)
-            tf.train.write_graph(sess.graph_def, os.path.join(storage_path), "graph.pb", False) #proto
+            tf.train.write_graph(sess.graph_def, os.path.join(storage_path), 'graph.pb', False) #proto
 
             # Vector to average the duration over the last report steps
             duration_vector = [0.0] * (args.eval_steps // 100)
@@ -138,10 +139,12 @@ def run_training(args):
                     eval_summary_writer.flush()
 
                     # Estimate the time left from the mean durations
-                    combined_duration = (sum(duration_vector)/len(duration_vector)) + duration_eval * (args.max_steps - step) // args.eval_steps
-                    h,m = divmod(duration * (args.max_steps - step),60)
+                    remaining_steps = args.max_steps - step
+                    combined_duration = np.mean(duration_vector)*remaining_steps + duration_eval * remaining_steps // args.eval_steps
+                    m,s = divmod(combined_duration,60)
+                    h,m = divmod(m,60)
                     d,h = divmod(h, 24)
-                    logger.info('Time left: {:.0f}:{:02.0f}:{:02.0f}'.format(d,h,m))
+                    logger.info('Time left: {:02.0f}:{:02.0f}:{:02.0f}:{:02.0f} (days:hours:minutes:seconds)'.format(d,h,m,s))
 
                 if step > 0 and step % 1000 == 0:
                     # Save a checkpoint

@@ -8,7 +8,7 @@ import logging
 import tensorflow as tf
 
 # Give the model a descriptive name
-NAME = "two_fully_connected"
+NAME = 'two_fully_connected'
 
 # The size of the input layer
 INPUT_SIZE = 723

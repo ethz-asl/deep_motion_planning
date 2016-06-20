@@ -11,8 +11,8 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 #################################################################################
 
 RAW_DATASET = empty_train
-DATASET = empty_train
-DATASET_EVAL = empty_test
+DATASET = simple_train
+DATASET_EVAL = simple_test
 
 requirements:
 	pip install -q -r requirements.txt
