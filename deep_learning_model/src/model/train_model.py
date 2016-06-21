@@ -32,6 +32,8 @@ def parse_args():
     parser.add_argument('-t', '--train_dir', help='Directory to save the model snapshots',
             default='./models/default')
     parser.add_argument('-l', '--learning_rate', help='Initial learning rate', type=float, default=0.01)
+    parser.add_argument('--weight_initialize', help='Initialize network weights with this checkpoint\
+                        file', type=str)
     args = parser.parse_args()
 
     return args
@@ -92,6 +94,16 @@ def run_training(args):
 
             # Vector to average the duration over the last report steps
             duration_vector = [0.0] * (args.eval_steps // 100)
+
+
+            if args.weight_initialize:
+
+                if os.path.exists(args.weight_initialize):
+                    saver.restore(sess, args.weight_initialize)
+                    logger.info('Model restored: {}'.format(args.weight_initialize))
+                else:
+                    logger.warning('No weights are loaded!')
+                    logger.warning('File does not exist: {}'.format(args.weight_initialize))
 
             # Perform all training steps
             for step in range(args.max_steps):
