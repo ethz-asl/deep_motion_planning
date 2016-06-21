@@ -4,7 +4,7 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped
 
 import actionlib
-from move_base_msgs.msg import MoveBaseAction, MoveBaseFeedback, MoveBaseResult
+from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
 
 import tf
 
@@ -40,6 +40,7 @@ class DeepMotionPlanner():
        
         # ROS topics
         scan_sub = rospy.Subscriber('scan', LaserScan, self.scan_callback)
+        goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_topic_callback)
         self.cmd_pub  = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
         # We over the same action api as the move base package
@@ -57,6 +58,10 @@ class DeepMotionPlanner():
 
         self.processing_thread.start()
         self._as.start()
+            
+        self.navigation_client = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
+        while not self.navigation_client.wait_for_server(rospy.Duration(5)):
+            rospy.loginfo('Waiting for deep_move_base action server')
 
     def __enter__(self):
         return self
@@ -192,4 +197,21 @@ class DeepMotionPlanner():
         """
         rospy.logerr('Action preempted')
         self._as.set_preempted(result=None, text='External preemption')
+
+    def goal_topic_callback(self, data):
+        # Generate a action message
+        goal = MoveBaseGoal()
+
+        goal.target_pose.header.frame_id = 'map'
+        goal.target_pose.pose.position.x = data.pose.position.x
+        goal.target_pose.pose.position.y = data.pose.position.y
+
+
+        goal.target_pose.pose.orientation.x = data.pose.orientation.x
+        goal.target_pose.pose.orientation.y = data.pose.orientation.y
+        goal.target_pose.pose.orientation.z = data.pose.orientation.z
+        goal.target_pose.pose.orientation.w = data.pose.orientation.w
+
+        # Send the waypoint
+        self.navigation_client.send_goal(goal)
 
