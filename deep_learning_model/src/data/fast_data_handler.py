@@ -1,4 +1,6 @@
 
+import threading
+import time
 import os
 import pandas as pd
 import numpy as np
@@ -27,8 +29,24 @@ class FastDataHandler():
             self.use_chunks = False
         else:
             self.use_chunks = True
+            self.chunk_thread = None
+            self.interrupt_thread = False
+
+        self.buffer = None
+        self.new_buffer_data = False
 
         self.batches = self.__generate_next_batch__()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def close(self):
+        self.interrupt_thread = True
+        if self.chunk_thread and self.chunk_thread.is_alive():
+            self.chunk_thread.join()
 
     def steps_per_epoch(self):
         """
@@ -42,16 +60,23 @@ class FastDataHandler():
         """
         data_columns = None
         cmd_columns = None
+
         while True:
             current_index = 0
-            for i in range(self.nrows // self.chunksize):
+
+            if self.use_chunks:
+                with pd.HDFStore(self.filepath, mode='r') as store:
+                    chunk = store.select('data',
+                            start=0, stop=self.chunksize)
+
+            for i in range(self.nrows // self.chunksize - 1):
 
                 # Load the next chunk of data from the HDF5 container
-                with pd.HDFStore(self.filepath, mode='r') as store:
-                    if self.use_chunks:
-                        chunk = store.select('data',
-                                start=i*self.chunksize, stop=(i+1)*self.chunksize)
-                    else:
+                if self.use_chunks:
+                    self.chunk_thread = threading.Thread(target=self.next_chunk, args=(i+1,))
+                    self.chunk_thread.start()
+                else:
+                    with pd.HDFStore(self.filepath, mode='r') as store:
                         chunk = store.select('data')
 
                 # Shuffle the data
@@ -70,10 +95,33 @@ class FastDataHandler():
 
                 # Return the batches from the current data chunk that is in memory
                 for j in range(chunk.shape[0] // self.batchsize):
-                    yield (chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, data_columns].values,
-                    chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values)
+                    yield (chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,
+                        data_columns].copy(deep=True).values,
+                    chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].copy(deep=True).values)
                     current_index += self.batchsize
-            
+
+                if self.use_chunks:
+                    start_time = time.time()
+                    self.chunk_thread.join()
+                    got_data = False
+                    while not got_data:
+                        if self.new_buffer_data:
+                            chunk = self.buffer.copy(deep=True)
+                            self.new_buffer_data = False
+                            got_data = True
+                        else:
+                            time.sleep(0.5)
+                    print('Waited: {}'.format(time.time() - start_time))
+
+                if self.interrupt_thread:
+                    return
+
+    def next_chunk(self, i):
+        with pd.HDFStore(self.filepath, mode='r') as store:
+            self.buffer = store.select('data',
+                    start=i*self.chunksize, stop=(i+1)*self.chunksize)
+            self.new_buffer_data = True
+
     def next_batch(self):
         """
         Load the next random batch from the loaded data file
