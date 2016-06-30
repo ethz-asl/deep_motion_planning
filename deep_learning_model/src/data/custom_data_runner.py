@@ -39,9 +39,9 @@ class CustomDataRunner():
     def close(self):
         self.threads_stop = True
         self.data_handler.close()
+        self.sess.run(self.queue.close(cancel_pending_enqueues=True))
         for thr in self.threads:
             thr.join()
-        self.sess.run(self.queue.close(cancel_pending_enqueues=True))
 
     def get_inputs(self):
         """
@@ -56,7 +56,11 @@ class CustomDataRunner():
         """
         while not (coord.should_stop() or self.threads_stop):
             data_x, data_y =self.data_handler.next_batch()
-            sess.run(self.enqueue_op, feed_dict={self.data_x:data_x, self.data_y:data_y})
+            try:
+                sess.run(self.enqueue_op, feed_dict={self.data_x:data_x, self.data_y:data_y})
+            except tf.errors.CancelledError as e:
+                # This happens if we stop processing and the enque operation is pending
+                pass
 
     def start_threads(self, sess, coord, n_threads=1):
         """ Start background threads to feed queue """
