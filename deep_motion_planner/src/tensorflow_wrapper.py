@@ -60,7 +60,7 @@ class TensorflowWrapper():
         """
         feed_dict = {'data_input:0': [data]}
 
-        prediction = self.sess.run(['prediction:0'], feed_dict=feed_dict)[0]
+        prediction = self.sess.run(['eval_prediction:0'], feed_dict=feed_dict)[0]
 
         return (prediction[0,0], prediction[0,1])
 
