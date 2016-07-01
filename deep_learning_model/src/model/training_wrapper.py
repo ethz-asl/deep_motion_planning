@@ -3,6 +3,7 @@ import _init_paths
 import logging 
 import os
 import time
+import getpass
 
 import tensorflow as tf
 
@@ -129,7 +130,7 @@ class TrainingWrapper():
                     duration_vector[((step % self.args.eval_steps)//100)] = duration
 
                 # Evaluatie the model
-                if step > 0 and step % self.args.eval_steps == 0 or step == self.args.max_steps:
+                if step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
                     start_eval = time.time()
 
                     # Evaluate the model. We use only a constant fraction of the entire dataset to
@@ -145,14 +146,6 @@ class TrainingWrapper():
 
                     eval_summary_writer.add_summary(summary_str, step)
                     eval_summary_writer.flush()
-
-                    # Estimate the time left from the mean durations
-                    # remaining_steps = self.args.max_steps - step
-                    # combined_duration = np.mean(duration_vector)*remaining_steps + duration_eval * remaining_steps // self.args.eval_steps
-                    # m,s = divmod(combined_duration,60)
-                    # h,m = divmod(m,60)
-                    # d,h = divmod(h, 24)
-                    # logger.info('Time left: {:02.0f}:{:02.0f}:{:02.0f}:{:02.0f} (days:hours:minutes:seconds)'.format(d,h,m,s))
 
                 if step > 0 and step % 1000 == 0:
                     # Save a checkpoint
@@ -176,3 +169,13 @@ class TrainingWrapper():
             with tf.gfile.GFile(os.path.join(storage_path, 'model.pb'), "wb") as f:
                     f.write(output_graph_def.SerializeToString())
                     logger.info("{} ops in the final graph.".format(len(output_graph_def.node)))
+
+        if self.args.mail:
+            self.send_notification(loss_value)
+
+    def send_notification(self, loss):
+        subject = 'Training has finished'
+        message = 'Error: {}\nPlease login to see the results.'.format(loss)
+        user = getpass.getuser()
+
+        os.system('echo "{}" | mail -s "{}" {}'.format(message, subject, user))

@@ -32,14 +32,11 @@ def parse_args():
     parser.add_argument('-l', '--learning_rate', help='Initial learning rate', type=float, default=0.01)
     parser.add_argument('--weight_initialize', help='Initialize network weights with this checkpoint\
                         file', type=str)
+    parser.add_argument('-m', '--mail', help='Send an email when training finishes',
+            action='store_true')
     args = parser.parse_args()
 
     return args
-
-def placeholder_inputs(data_size, cmd_size):
-    """Create placeholders for the tf graph"""
-    data_placeholder = tf.placeholder(tf.float32, shape=[None, data_size], name='data_input')
-    cmd_placeholder = tf.placeholder(tf.float32, shape=[None, cmd_size])
 
     return data_placeholder, cmd_placeholder
 
