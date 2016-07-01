@@ -16,9 +16,9 @@ INPUT_SIZE = 723
 CMD_SIZE = 2
 
 # Place some generic parameters here
-HIDDEN_1 = 600
-HIDDEN_2 = 500
-HIDDEN_3 = 250
+HIDDEN_1 = 723
+HIDDEN_2 = 723
+HIDDEN_3 = 500
 
 def learning_rate(initial):
     """
@@ -30,27 +30,35 @@ def learning_rate(initial):
             250000, 0.85, staircase=True)
     return global_step, learning_rate
 
-def inference(data):
+def inference(data, reuse=False, output_name='prediction'):
     """
     Define the deep neural network used for inference
     """
-    weights_hidden1 = tf.get_variable("weights_hidden1", shape=[INPUT_SIZE, HIDDEN_1],
-                       initializer=tf.contrib.layers.xavier_initializer())
-    biases_hidden1 = tf.Variable(tf.zeros([HIDDEN_1]))
-    weights_hidden2 = tf.get_variable("weights_hidden2", shape=[HIDDEN_1, HIDDEN_2],
-                       initializer=tf.contrib.layers.xavier_initializer())
-    biases_hidden2 = tf.Variable(tf.zeros([HIDDEN_2]))
-    weights_hidden3 = tf.get_variable("weights_hidden3", shape=[HIDDEN_2, HIDDEN_3],
-                       initializer=tf.contrib.layers.xavier_initializer())
-    biases_hidden3 = tf.Variable(tf.zeros([HIDDEN_3]))
-    weights_out = tf.Variable(
-        tf.truncated_normal([HIDDEN_3, CMD_SIZE], stddev=0.1) / tf.sqrt(tf.to_float(HIDDEN_3)))
-    biases_out = tf.Variable(tf.zeros([CMD_SIZE]))
+    with tf.variable_scope("prediction_scope") as scope:
+        if reuse:
+            scope.reuse_variables()
+            
+        weights_hidden1 = tf.get_variable('weights_hidden1', shape=[INPUT_SIZE, HIDDEN_1],
+                        initializer=tf.contrib.layers.xavier_initializer())
+        biases_hidden1 = tf.get_variable('biases_hidden1', [HIDDEN_1],
+                        initializer=tf.constant_initializer(0.0))
+        weights_hidden2 = tf.get_variable('weights_hidden2', shape=[HIDDEN_1, HIDDEN_2],
+                        initializer=tf.contrib.layers.xavier_initializer())
+        biases_hidden2 = tf.get_variable('biases_hidden2', [HIDDEN_2],
+                        initializer=tf.constant_initializer(0.0))
+        weights_hidden3 = tf.get_variable('weights_hidden3', shape=[HIDDEN_2, HIDDEN_3],
+                        initializer=tf.contrib.layers.xavier_initializer())
+        biases_hidden3 = tf.get_variable('biases_hidden3', [HIDDEN_3],
+                        initializer=tf.constant_initializer(0.0))
+        weights_out = tf.get_variable('weights_out', [HIDDEN_3, CMD_SIZE],
+                        initializer=tf.truncated_normal_initializer(stddev=0.1))
+        biases_out = tf.get_variable('biases_out', [CMD_SIZE],
+                        initializer=tf.constant_initializer(0.0))
 
     hidden_1 = tf.nn.relu(tf.add(tf.matmul(data, weights_hidden1), biases_hidden1))
-    hidden_2 = tf.nn.relu(tf.add(tf.matmul(hidden_1, weights_hidden2), biases_hidden2))
+    hidden_2 = tf.nn.relu(tf.add(tf.add(tf.matmul(hidden_1, weights_hidden2), biases_hidden2), data))
     hidden_3 = tf.nn.relu(tf.add(tf.matmul(hidden_2, weights_hidden3), biases_hidden3))
-    prediction = tf.add(tf.matmul(hidden_3, weights_out), biases_out, name='prediction')
+    prediction = tf.add(tf.matmul(hidden_3, weights_out), biases_out, name=output_name)
 
     return prediction
 

@@ -53,14 +53,15 @@ class TrainingWrapper():
             self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**18)
             data_batch, cmd_batch = self.custom_data_runner.get_inputs()
 
-            prediction = model.inference(data_batch)
+            prediction = model.inference(data_batch, output_name='prediction')
 
             loss, loss_split = model.loss(prediction, cmd_batch)
 
             train_op = model.training(loss, loss_split, learning_rate, global_step)
 
             eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(723, 2)
-            eval_prediction = model.inference(eval_data_placeholder, reuse=True)
+            eval_prediction = model.inference(eval_data_placeholder, reuse=True,
+                    output_name='eval_prediction')
             evaluation, evaluation_split = model.evaluation(eval_prediction, eval_cmd_placeholder)
 
             # Variables to use in the summary (shown in tensorboard)
@@ -169,7 +170,7 @@ class TrainingWrapper():
             # See:
             # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/freeze_graph.py
             logger.info('Save final model with weights')
-            output_node_names = 'prediction'
+            output_node_names = 'eval_prediction'
             output_graph_def = tf.python.client.graph_util.convert_variables_to_constants(
                     self.sess, self.sess.graph_def, output_node_names.split(","))
             with tf.gfile.GFile(os.path.join(storage_path, 'model.pb'), "wb") as f:
