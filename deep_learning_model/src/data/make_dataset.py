@@ -47,23 +47,25 @@ def main(project_dir):
         logger.error('Target file already exists: {}'.format(target_file))
         exit()
 
-    with pd.HDFStore(target_file) as store:
-        num_elements = 0
+#     with pd.HDFStore(target_file) as store:
+    store = pd.HDFStore(target_file)
+    num_elements = 0
 
-        # Iterate over all input files and add them to the HDF5 container
-        for i,f in enumerate(all_files):
-            print('({}/{}) {}'.format(i, len(all_files), f), end='\r')
-            current = pd.read_csv(f)
+    # Iterate over all input files and add them to the HDF5 container
+    for i,f in enumerate(all_files):
+        print('({}/{}) {}'.format(i, len(all_files), f), end='\r')
+        current = pd.read_csv(f)
 
-            # Make sure the final dataframe has a continous index
-            current['original_index'] = current.index
-            current['target_id'] = i+1
-            current.index = pd.Series(current.index) + num_elements
-            store.append('data', current)
+        # Make sure the final dataframe has a continous index
+        current['original_index'] = current.index
+        current['target_id'] = i+1
+        current.index = pd.Series(current.index) + num_elements
+        store.append('data', current)
 
-            num_elements += current.shape[0]
-                
-        print('')
+        num_elements += current.shape[0]
+            
+    print('')
+    store.close()
 
     logger.info('We combined {} lines'.format(num_elements))
     logger.info('File saved: {}'.format(target_file))

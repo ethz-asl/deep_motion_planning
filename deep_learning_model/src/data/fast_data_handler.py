@@ -20,8 +20,10 @@ class FastDataHandler():
             raise IOError('File does not exists: {}'.format(filepath))
 
         # Get the number of rows without loading any data into memory
-        with pd.HDFStore(filepath, mode='r') as store:
-            self.nrows = store.get_storer('data').nrows
+        store = pd.HDFStore(filepath, mode='r')
+#         with pd.HDFStore(filepath, mode='r') as store:
+        self.nrows = store.get_storer('data').nrows
+        store.close()
 
         # No chunksize specified, load the entire dataset
         if not self.chunksize:
@@ -66,9 +68,11 @@ class FastDataHandler():
             current_index = 0
 
             if self.use_chunks:
-                with pd.HDFStore(self.filepath, mode='r') as store:
-                    chunk = store.select('data',
-                            start=0, stop=self.chunksize)
+#                 with pd.HDFStore(self.filepath, mode='r') as store:
+                store = pd.HDFStore(self.filepath, mode='r')
+                chunk = store.select('data',
+                                     start=0, stop=self.chunksize)
+                store.close()
 
             for i in range(self.nrows // self.chunksize - 1):
 
