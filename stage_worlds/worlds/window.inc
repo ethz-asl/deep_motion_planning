@@ -12,11 +12,11 @@ window
   pcam_angle [ 70 0 ]
 
   # GUI options
-  show_data 0
+  show_data 1
   show_flags 1
   show_blocks 1
   show_clock 1
-  show_footprints 0
+  show_footprints 1
   show_grid 1
   show_trailarrows 0
   show_trailrise 0

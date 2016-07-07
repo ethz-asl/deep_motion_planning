@@ -5,7 +5,7 @@ include "map.inc"
 include "turtlebot/turtlebot.inc"
 include "window.inc"
 
-interval_sim            40
+interval_sim              40
 quit_time                 0
 resolution                0.02
 
