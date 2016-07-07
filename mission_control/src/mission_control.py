@@ -29,6 +29,7 @@ class MissionControl():
         mission_file = rospy.get_param('~mission_file')
         deep_motion_planner = rospy.get_param('~deep_motion_planner', default=False)
         stage_simulation = rospy.get_param('~stage_simulation', default=True)
+        self.all_planners = rospy.get_param('~all_planners', default=False)
         if not os.path.exists(mission_file):
             rospy.logerr('Mission file not found: {}'.format(mission_file))
             exit()
@@ -58,18 +59,23 @@ class MissionControl():
                 OccupancyGridUpdate, self.__costmap_update_callback__)
         self.joystick_sub = rospy.Subscriber('/joy', Joy, self.joystick_callback)
 
-        if deep_motion_planner:
-            self.navigation_client = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
-
-            while not self.navigation_client.wait_for_server(rospy.Duration(5)):
+        if not self.all_planners:
+          if deep_motion_planner:
+              self.navigation_client = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
+              while not self.navigation_client.wait_for_server(rospy.Duration(5)):
                 rospy.loginfo('Waiting for deep planner action server')
-
+          else:
+              # connect to the action api of the move_base package
+              self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         else:
-            # connect to the action api of the move_base package
-            self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+          self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+          self.navigation_client_deep = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
 
             while not self.navigation_client.wait_for_server(rospy.Duration(5)):
                 rospy.loginfo('Waiting for move_base action server')
+            
+            while not self.navigation_client.wait_for_server(rospy.Duration(5)):
+                rospy.loginfo('Waiting for deep planner action server')
 
         if stage_simulation:
           rospy.wait_for_service('/reset_positions')
@@ -126,6 +132,10 @@ class MissionControl():
         # Send the waypoint
         self.navigation_client.send_goal(goal.action_goal.goal, self.__done_callback__, \
                 self.__active_callback__, self.__feedback_callback__)
+        
+        if self.all_planners:
+          self.navigation_client_deep.send_goal(goal.action_goal.goal, self.__done_callback__, \
+                  self.__active_callback__, self.__feedback_callback__)
 
     def __goto_random__(self, parameters):
         """
@@ -138,7 +148,7 @@ class MissionControl():
         if self.random_waypoint_number == 0:
             self.random_waypoint_number = parameters[0]
 
-        rospy.loginfo('Goto random waypoint: {} remaining'.format(self.random_waypoint_number))
+        rospy.loginfo('Goto random waypoint: {} remaining'.format(int(self.random_waypoint_number)))
 
         # Sample a valid goal pose
         found_valid_sample = False
@@ -165,6 +175,8 @@ class MissionControl():
             rospy.loginfo('Timeout for command execution')
 
             self.navigation_client.cancel_goal()
+            if self.all_planners:
+              self.navigation_client_deep.cancel_goal()
             return
 
         # Compute the relative goal pose within the robot base frame
