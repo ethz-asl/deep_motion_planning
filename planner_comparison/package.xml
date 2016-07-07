@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package>
+  <name>planner_comparison</name>
+  <version>0.0.0</version>
+  <description>The planner_comparison package</description>
+  <maintainer email="mark.pfeiffer@mavt.ethz.ch">pfmark</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rospy</build_depend>
+  <run_depend>rospy</run_depend>
+</package>

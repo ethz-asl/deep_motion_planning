@@ -1,0 +1,20 @@
+<launch>
+  
+  <arg name="deep_motion_planning" default="False" />
+
+  <param name="/use_sim_time" type="bool" value="true" />
+  
+	<node pkg="stage_ros" type="stageros" name="stageros" args="$(find stage_worlds)/worlds/shapes.world" respawn="false" >
+    <param name="base_watchdog_timeout" value="0.2"/>
+  </node>
+
+  <include file="$(find planner_comparison)/launch/core_stage.launch">
+    <arg name="deep_motion_planning" value="$(arg deep_motion_planning)" />
+  </include>
+
+  <arg name="map_file" default="$(find stage_worlds)/cfg/shapes.yaml"/>
+	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)">
+	  <remap from="map" to="map"/>
+	</node>
+
+</launch>
