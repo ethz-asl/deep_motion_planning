@@ -35,11 +35,13 @@ class CustomDataRunner():
             self.enqueue_op = self.queue.enqueue_many([self.data_x, self.data_y])
             self.threads_stop = False
             self.threads = list()
+            self.sess = None
 
     def close(self):
         self.threads_stop = True
         self.data_handler.close()
-        self.sess.run(self.queue.close(cancel_pending_enqueues=True))
+        if self.sess:
+            self.sess.run(self.queue.close(cancel_pending_enqueues=True))
         for thr in self.threads:
             thr.join()
 
