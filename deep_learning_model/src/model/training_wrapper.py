@@ -66,13 +66,18 @@ class TrainingWrapper():
             evaluation, evaluation_split = model.evaluation(eval_prediction, eval_cmd_placeholder)
 
             # Variables to use in the summary (shown in tensorboard)
-            tf.scalar_summary('loss', loss)
-            tf.scalar_summary('loss_linear_x', loss_split[0])
-            tf.scalar_summary('loss_angular_yaw', loss_split[1])
-            tf.scalar_summary('learning_rate', learning_rate)
+            train_loss = tf.scalar_summary('loss', loss)
+            train_loss_lin = tf.scalar_summary('loss_linear_x', loss_split[0])
+            train_loss_ang = tf.scalar_summary('loss_angular_yaw', loss_split[1])
+            train_learning_rate = tf.scalar_summary('learning_rate', learning_rate)
 
-            summary_op = tf.merge_all_summaries()
-            eval_summary_op = tf.merge_all_summaries()
+            eval_loss = tf.scalar_summary('loss', evaluation)
+            eval_loss_lin = tf.scalar_summary('loss_linear_x', evaluation_split[0])
+            eval_loss_ang = tf.scalar_summary('loss_angular_yaw', evaluation_split[1])
+
+            summary_op = tf.merge_summary([train_loss, train_loss_lin, train_loss_ang,
+                train_learning_rate])
+            eval_summary_op = tf.merge_summary([eval_loss, eval_loss_lin, eval_loss_ang])
 
             # Saver for model snapshots
             saver = tf.train.Saver()
@@ -139,7 +144,7 @@ class TrainingWrapper():
                     feed_dict = {eval_data_placeholder: X_eval, eval_cmd_placeholder: Y_eval}
                     loss_value, loss_split_value = self.sess.run([evaluation, evaluation_split], feed_dict=feed_dict)
 
-                    summary_str, loss_split_value = self.sess.run(summary_op, feed_dict=feed_dict), loss_split_value
+                    summary_str = self.sess.run(eval_summary_op, feed_dict=feed_dict)
 
                     duration_eval = time.time() - start_eval
                     logger.info('Evaluattion: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
