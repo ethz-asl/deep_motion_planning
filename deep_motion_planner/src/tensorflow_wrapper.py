@@ -58,7 +58,7 @@ class TensorflowWrapper():
         """
         Take the given data and perform the model inference on it
         """
-        feed_dict = {'data_input:0': [data]}
+        feed_dict = {'data_input:0': [data], 'keep_prob_placeholder:0': 1.0}
 
         prediction = self.sess.run(['eval_prediction:0'], feed_dict=feed_dict)[0]
 

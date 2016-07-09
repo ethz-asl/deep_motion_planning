@@ -54,14 +54,15 @@ class TrainingWrapper():
             self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**18)
             data_batch, cmd_batch = self.custom_data_runner.get_inputs()
 
-            prediction = model.inference(data_batch, output_name='prediction')
+            keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
+            prediction = model.inference(data_batch, keep_prob_placeholder, output_name='prediction')
 
             loss, loss_split = model.loss(prediction, cmd_batch)
 
             train_op = model.training(loss, loss_split, learning_rate, global_step)
 
             eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(723, 2)
-            eval_prediction = model.inference(eval_data_placeholder, reuse=True,
+            eval_prediction = model.inference(eval_data_placeholder, keep_prob_placeholder, reuse=True,
                     output_name='eval_prediction')
             evaluation, evaluation_split = model.evaluation(eval_prediction, eval_cmd_placeholder)
 
@@ -118,7 +119,9 @@ class TrainingWrapper():
             for step in range(self.args.max_steps):
                 start_time = time.time()
 
-                _, loss_value, loss_split_value = self.sess.run([train_op, loss, loss_split])
+                feed_dict = {keep_prob_placeholder: 0.5}
+                _, loss_value, loss_split_value = self.sess.run([train_op, loss, loss_split],
+                        feed_dict=feed_dict)
 
                 duration = time.time() - start_time
 
@@ -127,7 +130,7 @@ class TrainingWrapper():
                     # Print status to stdout.
                     logger.info('Step {}: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(step,
                         loss_split_value[0], loss_split_value[1], duration/1e-3))
-                    summary_str = self.sess.run(summary_op)
+                    summary_str = self.sess.run(summary_op, feed_dict=feed_dict)
                     summary_writer.add_summary(summary_str, step)
                     summary_writer.flush()
 
@@ -141,7 +144,8 @@ class TrainingWrapper():
                     # Evaluate the model. We use only a constant fraction of the entire dataset to
                     # reduce the computation time, yet get a rough estimate of the model's
                     # generalization performance
-                    feed_dict = {eval_data_placeholder: X_eval, eval_cmd_placeholder: Y_eval}
+                    feed_dict = {eval_data_placeholder: X_eval, eval_cmd_placeholder: Y_eval,
+                            keep_prob_placeholder: 1.0}
                     loss_value, loss_split_value = self.sess.run([evaluation, evaluation_split], feed_dict=feed_dict)
 
                     summary_str = self.sess.run(eval_summary_op, feed_dict=feed_dict)

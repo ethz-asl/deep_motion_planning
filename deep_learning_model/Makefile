@@ -11,7 +11,7 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 #################################################################################
 
 RAW_DATASET = empty_train
-DATASET = simple_train
+DATASET = simple_train_2
 DATASET_EVAL = simple_test
 
 requirements:
@@ -23,7 +23,7 @@ data:
 train:
 	python src/model/train_model.py data/processed/$(DATASET).h5 \
 				 													data/processed/$(DATASET_EVAL).h5 \
-				 													-l 0.005 -s 2000000 -b 128 --mail
+				 													-l 0.0001 -s 2000000 -b 128 --mail
 
 clean:
 	find . -name "*.pyc" -exec rm {} \;
