@@ -18,7 +18,6 @@ TrajectoryPlannerROS:
   holonomic_robot: false
   dwa: true
 
-  vx_samples: 3
+  vx_samples: 5
 
   xy_goal_tolerance: 0.05
-  meter_scoring: true
