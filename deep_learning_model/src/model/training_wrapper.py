@@ -115,6 +115,7 @@ class TrainingWrapper():
             with FastDataHandler(self.args.datafile_eval, eval_n_elements, eval_n_elements) as data_handler_eval:
                 (X_eval,Y_eval) = data_handler_eval.next_batch()
 
+            loss_train = 0.0
             # Perform all training steps
             for step in range(self.args.max_steps):
                 start_time = time.time()
@@ -133,6 +134,7 @@ class TrainingWrapper():
                     summary_str = self.sess.run(summary_op, feed_dict=feed_dict)
                     summary_writer.add_summary(summary_str, step)
                     summary_writer.flush()
+                    loss_train = loss_value
 
                     # Replace the durations in fifo fashion
                     duration_vector[((step % self.args.eval_steps)//100)] = duration
@@ -180,11 +182,11 @@ class TrainingWrapper():
                     logger.info("{} ops in the final graph.".format(len(output_graph_def.node)))
 
         if self.args.mail:
-            self.send_notification(loss_value)
+            self.send_notification(loss_train, loss_value)
 
-    def send_notification(self, loss):
+    def send_notification(self, loss_train, loss_eval):
         subject = 'Training has finished'
-        message = 'Error: {}\nPlease login to see the results.'.format(loss)
+        message = 'Error Training: {}\nError Evaluation: {}\nPlease login to see the results.'.format(loss_train, loss_eval)
         user = getpass.getuser()
 
         os.system('echo "{}" | mail -s "{}" {}'.format(message, subject, user))
