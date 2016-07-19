@@ -9,7 +9,7 @@ import tensorflow as tf
 
 from data.custom_data_runner import CustomDataRunner
 from data.fast_data_handler import FastDataHandler
-import model
+import conv_model as model
 
 class TrainingWrapper():
     """Wrap the training"""
@@ -19,6 +19,7 @@ class TrainingWrapper():
         self.runners = None
         self.sess = None
         self.custom_data_runner = None
+        self.eval_n_elements = 4*8192 
 
     def __enter__(self):
         return self
@@ -111,8 +112,7 @@ class TrainingWrapper():
                     logger.warning('No weights are loaded!')
                     logger.warning('File does not exist: {}'.format(self.args.weight_initialize))
 
-            eval_n_elements = 4*8192 
-            with FastDataHandler(self.args.datafile_eval, eval_n_elements, eval_n_elements) as data_handler_eval:
+            with FastDataHandler(self.args.datafile_eval, self.eval_n_elements, self.eval_n_elements) as data_handler_eval:
                 (X_eval,Y_eval) = data_handler_eval.next_batch()
 
             loss_train = 0.0
@@ -140,7 +140,7 @@ class TrainingWrapper():
                     duration_vector[((step % self.args.eval_steps)//100)] = duration
 
                 # Evaluatie the model
-                if step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
+                if False: #step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
                     start_eval = time.time()
 
                     # Evaluate the model. We use only a constant fraction of the entire dataset to
