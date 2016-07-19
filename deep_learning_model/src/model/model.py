@@ -21,7 +21,8 @@ def learning_rate(initial):
     """
     # We use an exponential decy for the model
     global_step = tf.Variable(0, name='global_step', trainable=False)
-    learning_rate = tf.constant(initial)
+    learning_rate = tf.train.exponential_decay(initial, global_step, 
+            250000, 0.85, staircase=True)
     return global_step, learning_rate
 
 def __get_variable__(index, input_size, output_size):

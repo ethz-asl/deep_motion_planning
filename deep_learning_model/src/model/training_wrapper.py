@@ -62,8 +62,8 @@ class TrainingWrapper():
             train_op = model.training(loss, loss_split, learning_rate, global_step)
 
             eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(723, 2)
-            eval_prediction = model.inference(eval_data_placeholder, keep_prob_placeholder, reuse=True,
-                    output_name='eval_prediction')
+            eval_prediction = model.inference(eval_data_placeholder, keep_prob_placeholder,
+                    reuse=True, output_name='eval_prediction')
             evaluation, evaluation_split = model.evaluation(eval_prediction, eval_cmd_placeholder)
 
             # Variables to use in the summary (shown in tensorboard)

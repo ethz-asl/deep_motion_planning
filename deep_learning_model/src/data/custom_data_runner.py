@@ -5,7 +5,6 @@ Description:
     https://indico.io/blog/tensorflow-data-input-part2-extensions/
 """
 import threading
-import traceback as tb
 
 import tensorflow as tf
 
