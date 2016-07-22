@@ -1,5 +1,4 @@
-<?xml version="1.0"?>
-<package>
+<package format="2">
   <name>planner_comparison</name>
   <version>0.0.0</version>
   <description>The planner_comparison package</description>
@@ -7,6 +6,8 @@
   <license>TODO</license>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>rospy</build_depend>
-  <run_depend>rospy</run_depend>
+  <buildtool_depend>catkin_simple</buildtool_depend>
+  <depend>rospy</depend>
+  <depend>deep_motion_planner</depend>
+ 
 </package>

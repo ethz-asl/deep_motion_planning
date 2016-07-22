@@ -10,7 +10,7 @@
   </node>
   
  
-  <include file="$(find planner_comparison)/launch/shapes_comparison.launch">
+  <include file="$(find planner_comparison)/launch/world_comparison.launch">
     <arg name="deep_motion_planning" value="False" />
   </include>
   
