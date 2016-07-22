@@ -15,7 +15,7 @@ INPUT_SIZE = 1083
 # The size of the output layer
 CMD_SIZE = 2
 
-def learning_rate(initial):
+def learning_rate(initial, percent=0.0):
     """
     Define learning rate for your model
     """

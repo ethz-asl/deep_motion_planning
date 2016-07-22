@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import getpass
+import pickle
 
 import tensorflow as tf
 import numpy as np
@@ -35,15 +36,18 @@ class TrainingWrapper():
         if self.sess:
             self.sess.close()
 
-    def placeholder_inputs(self, data_size, cmd_size, data_placeholder_name='data_input'):
+    def placeholder_inputs(self, data_size, output_size):
         """Create placeholders for the tf graph"""
-        data_placeholder = tf.placeholder(tf.float32, shape=[None, data_size], name=data_placeholder_name)
-        cmd_placeholder = tf.placeholder(tf.float32, shape=[None, cmd_size])
+        data_placeholder = tf.placeholder(tf.float32, shape=[None, data_size], name='data_input')
+        output_placeholder = tf.placeholder(tf.float32, shape=[None, output_size])
 
-        return data_placeholder, cmd_placeholder
+        return data_placeholder, output_placeholder
 
     def run(self):
         logger = logging.getLogger(__name__)
+        
+        train_loss_container = []
+        eval_loss_container = []
 
         # Folder where to store snapshots, meta data and the final model
         storage_path = os.path.join(self.args.train_dir, (time.strftime('%Y-%m-%d_%H-%M_') + model.NAME))
@@ -58,13 +62,13 @@ class TrainingWrapper():
 
             logger.info('Create the data runner for the input data')
             self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**18)
-            data_batch, cmd_batch = self.custom_data_runner.get_inputs()
+            data_batch, output_batch = self.custom_data_runner.get_inputs()
 
             logger.info('Add operations to the computation graph')
             keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
             prediction = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size, output_name='prediction')
 
-            loss, loss_split = model.loss(prediction, cmd_batch)
+            loss, loss_split = model.loss(prediction, output_batch)
 
             train_op = model.training(loss, loss_split, learning_rate, global_step)
 
@@ -142,6 +146,8 @@ class TrainingWrapper():
                         feed_dict=feed_dict)
 
                 duration = time.time() - start_time
+                
+                train_loss_container.append((step, loss_value))
 
                 # Report every 100 steps
                 if step > 0 and step % 100 == 0:
@@ -162,6 +168,11 @@ class TrainingWrapper():
                     # Evaluate the model. We use only a constant fraction of the entire dataset to
                     # reduce the computation time, yet get a rough estimate of the model's
                     # generalization performance
+                    feed_dict = {eval_data_placeholder: X_eval, eval_output_placeholder: Y_eval,
+                            keep_prob_placeholder: 1.0}
+                    loss_value, loss_split_value = self.sess.run([evaluation, evaluation_split], feed_dict=feed_dict)
+                    
+                    eval_loss_container.append((step, loss_value))
 
                     # Create an empty array, that has the correct size for to hold all predictions
                     eval_predictions = np.zeros([self.eval_n_elements,2], dtype=np.float)
@@ -190,7 +201,7 @@ class TrainingWrapper():
 
                     duration_eval = time.time() - start_eval
 
-                    logger.info('Evaluattion: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
+                    logger.info('Evaluation: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
 
                     eval_summary_writer.add_summary(summary_str, step)
                     eval_summary_writer.flush()
@@ -217,6 +228,11 @@ class TrainingWrapper():
             with tf.gfile.GFile(os.path.join(storage_path, 'model.pb'), "wb") as f:
                     f.write(output_graph_def.SerializeToString())
                     logger.info("{} ops in the final graph.".format(len(output_graph_def.node)))
+
+
+        # Save loss values 
+        pickle.dump(train_loss_container, open(storage_path+'/train/train_loss_container.pkl','wb'))
+        pickle.dump(eval_loss_container, open(storage_path+'/eval/eval_loss_container.pkl','wb'))
 
         if self.args.mail:
             self.send_notification(loss_train, loss_value)
