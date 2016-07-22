@@ -56,7 +56,7 @@ class TrainingWrapper():
         with tf.Graph().as_default():
 
             # Define the used machine learning model
-            global_step, learning_rate = model.learning_rate(self.args.learning_rate)
+            global_step, learning_rate = model.learning_rate(self.args.learning_rate, self.args.max_steps)
 
             self.sess = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=8))
 
