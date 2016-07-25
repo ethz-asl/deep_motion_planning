@@ -60,6 +60,19 @@ def loss(prediction, cmd):
     """
     loss_split = tf.reduce_mean(tf.abs(prediction - cmd), 0)
     loss = tf.reduce_mean(tf.abs(prediction - cmd))
+    
+    weights_hidden_6, biases_hidden_6 = __get_variable__(6, INPUT_SIZE, 2048)
+    weights_hidden_7, biases_hidden_7 = __get_variable__(7, 2048, 2048)
+    weights_hidden_8, biases_hidden_8 = __get_variable__(8, 2048, 1024)
+    weights_out = tf.get_variable('weights_out', [1024, CMD_SIZE], initializer=tf.truncated_normal_initializer(stddev=0.1))
+    biases_out = tf.get_variable('biases_out', [CMD_SIZE], initializer=tf.constant_initializer(0.0))
+    
+    regularizers = (tf.nn.l2_loss(weights_hidden_6) + tf.nn.l2_loss(biases_hidden_6) + 
+                    tf.nn.l2_loss(weights_hidden_7) + tf.nn.l2_loss(biases_hidden_7) +
+                    tf.nn.l2_loss(weights_hidden_8) + tf.nn.l2_loss(biases_hidden_8) +
+                    tf.nn.l2_loss(weights_out) + tf.nn.l2_loss(biases_out))
+    
+    loss += 1e-3 * regularizers
 
     return loss, loss_split
 
