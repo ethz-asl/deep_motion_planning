@@ -48,6 +48,7 @@ class TrainingWrapper():
         
         train_loss_container = []
         eval_loss_container = []
+        learning_rate_container = []
 
         # Folder where to store snapshots, meta data and the final model
         storage_path = os.path.join(self.args.train_dir, (time.strftime('%Y-%m-%d_%H-%M_') + model.NAME))
@@ -148,6 +149,7 @@ class TrainingWrapper():
                 duration = time.time() - start_time
                 
                 train_loss_container.append((step, loss_value))
+                learning_rate_container.append((step, learning_rate))
 
                 # Report every 100 steps
                 if step > 0 and step % 100 == 0:
@@ -231,8 +233,10 @@ class TrainingWrapper():
 
 
         # Save loss values 
-        pickle.dump(train_loss_container, open(storage_path+'/train/train_loss_container.pkl','wb'))
-        pickle.dump(eval_loss_container, open(storage_path+'/eval/eval_loss_container.pkl','wb'))
+        pickle.dump(train_loss_container, open(storage_path+'/train_loss_container.pkl','wb'))
+        pickle.dump(eval_loss_container, open(storage_path+'/eval_loss_container.pkl','wb'))
+        pickle.dump(learning_rate_container, open(storage_path+'/learning_rate_container.pkl','wb'))
+        
 
         if self.args.mail:
             self.send_notification(loss_train, loss_value)
