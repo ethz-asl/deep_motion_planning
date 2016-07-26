@@ -10,10 +10,12 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   nav_msgs
   message_filters
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
+find_package(Eigen3 REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -117,6 +119,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
   include/
 )
 
@@ -134,6 +137,7 @@ include_directories(
 add_executable(safety_module_node 
                   src/node.cpp
                   src/SafetyModuleWrapper.cpp
+                  src/SafetyModule.cpp
 )
 
 ## Add cmake target dependencies of the executable

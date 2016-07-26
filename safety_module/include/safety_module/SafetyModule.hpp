@@ -1,9 +1,9 @@
 #ifndef SAFETYMODULE_H_
 #define SAFETYMODULE_H_
 
-#include <aluMsgs/laserMsgManagerOld.h>
+#include <Eigen/Geometry>
 
-#include <planner_interfaces/Pose2d.hpp>
+#include <vector>
 
 inline int sign(const double x) {
   return x >= 0 ? 1 : -1;
@@ -18,13 +18,9 @@ class SafetyModule {
   SafetyModule(double robotRadius, double minimumDistanceToRobot, double timeOffset, double maximumDeceleration);
   ~SafetyModule() { }
 
-  bool motionIsSafe(const planning2d::Pose2d& currentPose,
+  bool motionIsSafe(const Eigen::Vector2d& currentPosition, const Eigen::Quaterniond& currentOrientation,
                       const double transVel, const double rotVel,
-                      const LaserMsgOld& laser2dMsg);
-
-  bool motionIsSafe(const planning2d::Pose2d& currentPose,
-                      const double transVel, const double rotVel,
-                      const LaserMeasurementMatrix& pointsLaserFrame);
+                      const std::vector<Eigen::Vector2d>& pointsLaser);
 
   void reset() { _motionIsSafe = true; _statusMsg.clear(); }
 
@@ -72,15 +68,15 @@ class SafetyModule {
 
  private:
   // parameters
-  double _robotRadius = 0.4;
-  double _minimumDistanceToRobot = 0.2; // m
+  double _robotRadius = 0.35;
+  double _minimumDistanceToRobot = 0.02; // m
   double _timeOffset = 0.3; // s (time until sent velocity command gets executed by the robot)
   double _maxDeceleration = 1.0; // m/s^2
   double _rotVelThreshold = 1e-3; // rad/s
   double _distSensorToEdge = 0.1; // m
-  double _minimumDistanceToSensor = 0.15;
-  double _minimumLateralDistance = 0.1;
-  double _minimumLongitudinalDistance = 0.1;
+  double _minimumDistanceToSensor = 0.0;
+  double _minimumLateralDistance = 0.02;
+  double _minimumLongitudinalDistance = 0.12;
 
   // safety state
   bool _motionIsSafe = true;

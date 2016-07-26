@@ -2,12 +2,15 @@
 #define _SAFETY_MODULE_WRAPPER_HPP_
 
 #include <ros/ros.h>
-#include <nav_msgs/Odometry.h>
 #include <sensor_msgs/LaserScan.h>
 #include <geometry_msgs/TwistStamped.h>
 
+#include <tf/transform_listener.h>
+
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+
+#include "safety_module/SafetyModule.hpp"
 
 namespace safety_module
 {
@@ -18,16 +21,19 @@ namespace safety_module
     ~SafetyModuleWrapper() = default;
   
   private:
-    ros::NodeHandle _nh;
+    SafetyModule _safetyModule;
 
-    message_filters::Subscriber<sensor_msgs::LaserScan> _laser_sub;
-    message_filters::Subscriber<nav_msgs::Odometry> _odom_sub;
-    message_filters::Subscriber<geometry_msgs::TwistStamped> _cmd_sub;
-    message_filters::TimeSynchronizer<sensor_msgs::LaserScan, nav_msgs::Odometry, 
-      geometry_msgs::TwistStamped> _sync;
+    ros::NodeHandle _nh;
+    tf::TransformListener _tfListener;
+
+    ros::Publisher _safetyInterruptPub; //!< Publish message in an unsafe state
+    ros::Publisher _cmdPub; //!< Forward the velocity commands if it is safe
+
+    message_filters::Subscriber<sensor_msgs::LaserScan> _laserSub;
+    message_filters::Subscriber<geometry_msgs::TwistStamped> _cmdSub;
+    message_filters::TimeSynchronizer<sensor_msgs::LaserScan, geometry_msgs::TwistStamped> _sync;
 
     void syncCallback(const sensor_msgs::LaserScan::ConstPtr& laser,
-                      const nav_msgs::Odometry::ConstPtr& odom,
                       const geometry_msgs::TwistStamped::ConstPtr& cmd);
   }; 
 } /* safety_module */ 

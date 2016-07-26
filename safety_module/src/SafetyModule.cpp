@@ -3,47 +3,29 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <sm/timing/Timer.hpp>
-#include <sm/logging.hpp>
-
-#ifdef local_planner_safety_module_ENABLE_TIMING
-  typedef sm::timing::Timer Timer;
-#else
-  typedef sm::timing::DummyTimer Timer;
-#endif
+#include <ros/ros.h>
 
 SafetyModule::SafetyModule(double robotRadius, double minimumDistanceToRobot, double timeOffset, double maximumDeceleration)
    : _robotRadius(robotRadius), _minimumDistanceToRobot(minimumDistanceToRobot), _timeOffset(timeOffset), _maxDeceleration(maximumDeceleration) {
 
 }
 
-bool SafetyModule::motionIsSafe(const planning2d::Pose2d& currentPose,
-                                         const double transVel, const double rotVel,
-                                         const LaserMsgOld& laser2dMsg) {
-  LaserMeasurementMatrix laserMeasurementsLaserFrame;
-  laserMeasurementsLaserFrame.resize(2, laser2dMsg.range.size());
-  for (size_t i = 0; i < laser2dMsg.range.size(); ++i) {
-     Eigen::Vector2d laserMeas = transformPointPolar2KarthesianCoordinates(laser2dMsg.range[i], laser2dMsg.getAngleOfBeam(i));
-     laserMeasurementsLaserFrame.col(i) = laserMeas;
-   }
-  return motionIsSafe(currentPose, transVel, rotVel, laserMeasurementsLaserFrame);
-}
-
-bool SafetyModule::motionIsSafe(const planning2d::Pose2d& currentPose,
-                                const double transVel, const double rotVel,
-                                const LaserMeasurementMatrix& pointsLaserFrame) {
-  Timer timer("SafetyModule: motionIsSafe", false);
+bool SafetyModule::motionIsSafe(const Eigen::Vector2d& currentPosition, const Eigen::Quaterniond& currentOrientation,
+                      const double transVel, const double rotVel,
+                      const std::vector<Eigen::Vector2d>& pointsLaser)
+{
   
   if(transVel < 0){
-    SM_WARN_STREAM_NAMED("safety_module", "TransVel is negative: " << transVel << ". This is currently unsafe!");
+    ROS_WARN_STREAM_NAMED("safety_module", "TransVel is negative: " << transVel << ". This is currently unsafe!");
     return false;
   }
 
   std::ostringstream os;
-  _distSensorToEdge = _robotRadius - abs(currentPose.position().asVector().norm());
-  Eigen::Vector2d currentHeadingVector(cos(currentPose.yaw()), sin(currentPose.yaw()));
+  _distSensorToEdge = _robotRadius - abs(currentPosition.norm());
+  double yaw = currentOrientation.matrix().eulerAngles(0,1,2)[2];
+  Eigen::Vector2d currentHeadingVector(cos(yaw), sin(yaw));
   Eigen::Vector2d positionRobotStart, positionRobotEnd, positionCenter;
-  positionRobotStart = currentPose.position().asVector();
+  positionRobotStart = currentPosition;
 
   // Compute stopping distance of the robot
   const double distStop = computeStoppingDistance(transVel);
@@ -52,8 +34,8 @@ bool SafetyModule::motionIsSafe(const planning2d::Pose2d& currentPose,
 
   double minLaserDistSquared = std::numeric_limits<double>::max();
   double distSquared;
-  for (int i = 0; i<pointsLaserFrame.cols(); ++i) {
-    Eigen::Vector2d laserMeas = pointsLaserFrame.col(i);
+  for (const Eigen::Vector2d& laserMeas : pointsLaser)
+  {
     objectIsClose = objectTooClose(laserMeas, positionRobotStart, distSquared);
     minLaserDistSquared = distSquared < minLaserDistSquared ? distSquared : minLaserDistSquared;
     if (objectIsClose)
@@ -65,18 +47,18 @@ bool SafetyModule::motionIsSafe(const planning2d::Pose2d& currentPose,
 
   // Compute center of rotation for current motion
   if (_motionIsSafe) {
-    SM_VERBOSE_STREAM("distStop: " << distStop << ", transVel: " << transVel << ", rotVel: " << rotVel);
+    ROS_DEBUG_STREAM("distStop: " << distStop << ", transVel: " << transVel << ", rotVel: " << rotVel);
     if (abs(rotVel) <= _rotVelThreshold) {
-      for (int i = 0; i<pointsLaserFrame.cols(); ++i) {
-        Eigen::Vector2d laserMeas = pointsLaserFrame.col(i);
+      for (const Eigen::Vector2d& laserMeas : pointsLaser)
+      {
         if (transVel>0) {
           collision = (std::abs(laserMeas(1)) < _robotRadius + _minimumLateralDistance) && (laserMeas(0) < distStop + _distSensorToEdge + _minimumLongitudinalDistance) && (laserMeas(0) > positionRobotStart(1));
           if (collision)
-            SM_WARN_STREAM_NAMED("safety_module", "Anticipated collision (straight forward driving). Stopping distance is " << distStop);
+            ROS_DEBUG_STREAM_NAMED("safety_module", "Anticipated collision (straight forward driving). Stopping distance is " << distStop);
         } else if (transVel < 0){
           collision = (std::abs(laserMeas(1)) < _robotRadius + _minimumLateralDistance) && (laserMeas(0) < positionRobotStart(1)) && (laserMeas(0) > -(distStop + _distSensorToEdge + _minimumLongitudinalDistance));
           if (collision)
-            SM_WARN_STREAM_NAMED("safety_module", "Anticipated collision (straight backward driving). Stopping distance is " << distStop);
+            ROS_DEBUG_STREAM_NAMED("safety_module", "Anticipated collision (straight backward driving). Stopping distance is " << distStop);
         }
 
         if (collision)
@@ -97,8 +79,8 @@ bool SafetyModule::motionIsSafe(const planning2d::Pose2d& currentPose,
         int signForCollisionCenterStart = getSignOfDistance(hyperCenterStart, positionRobotEnd);
         int signForCollisionCenterEnd = getSignOfDistance(hyperCenterEnd, positionRobotStart);
 
-        for (int i = 0; i<pointsLaserFrame.cols(); ++i) {
-          Eigen::Vector2d laserMeas = pointsLaserFrame.col(i);
+        for (const Eigen::Vector2d& laserMeas : pointsLaser)
+        {
           double distCenterSquared = (laserMeas - positionCenter).squaredNorm();
           collision = (distCenterSquared <= (radiusRobotTrajectory + _robotRadius + _minimumLateralDistance) * (radiusRobotTrajectory + _robotRadius + _minimumLateralDistance)) &&  // within sector of circle
               (distCenterSquared >= (radiusRobotTrajectory - _robotRadius - _minimumLateralDistance) * (radiusRobotTrajectory - _robotRadius - _minimumLateralDistance)) &&
@@ -120,7 +102,7 @@ bool SafetyModule::motionIsSafe(const planning2d::Pose2d& currentPose,
     os << "Motion is safe. ";
 
   _statusMsg += os.str();
-  SM_WARN_STREAM_COND(!_motionIsSafe, _statusMsg);
+  ROS_DEBUG_STREAM_COND(!_motionIsSafe, _statusMsg);
 
   return _motionIsSafe;
 }
@@ -171,8 +153,8 @@ bool SafetyModule::objectTooClose(const Eigen::Vector2d& laserMeas, const Eigen:
   laserPointDistToCenterSquared = (laserMeas - positionRobot).squaredNorm();
   bool tooCloseToRobotCenter = (laserPointDistToCenterSquared <= (_robotRadius + _minimumDistanceToRobot) * (_robotRadius + _minimumDistanceToRobot));
   bool tooCloseToSensor(laserMeas.norm()<=_minimumDistanceToSensor);
-  SM_VERBOSE_STREAM_NAMED("safety_module", "Distance to robot center is " << sqrt(laserPointDistToCenterSquared));
-  SM_VERBOSE_STREAM_NAMED("safety_module","Distance to sensor is " << laserMeas.norm());
-  SM_VERBOSE_STREAM_NAMED("safety_module", "Object is too close to sensor: " << tooCloseToSensor << ", too close to robot center: " << tooCloseToRobotCenter);
+  ROS_DEBUG_STREAM_COND_NAMED(tooCloseToSensor || tooCloseToRobotCenter, "safety_module", "Distance to robot center is " << sqrt(laserPointDistToCenterSquared));
+  ROS_DEBUG_STREAM_COND_NAMED(tooCloseToSensor || tooCloseToRobotCenter, "safety_module","Distance to sensor is " << laserMeas.norm());
+  ROS_DEBUG_STREAM_COND_NAMED(tooCloseToSensor || tooCloseToRobotCenter, "safety_module", "Object is too close to sensor: " << tooCloseToSensor << ", too close to robot center: " << tooCloseToRobotCenter);
   return tooCloseToRobotCenter || tooCloseToSensor;
 }
