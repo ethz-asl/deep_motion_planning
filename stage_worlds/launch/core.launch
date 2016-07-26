@@ -7,6 +7,11 @@
     
   <group if="$(arg deep_motion_planning)" >
     <include file="$(find deep_motion_planner)/launch/deep_motion_planner.launch" />
+    <node name="stamp_unchecked_cmd_vel" pkg="data_capture" type="stamp_cmd_vel_node.py" output="screen">
+      <remap from="/cmd_vel" to="/unchecked_cmd_vel"/>
+      <remap from="/cmd_vel_stamped" to="/unchecked_cmd_vel_stamped"/>
+    </node>
+    <node name="safety_module_node" pkg="safety_module" type="safety_module_node" />
   </group>
 
 
