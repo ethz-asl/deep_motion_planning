@@ -13,7 +13,7 @@ NAME = 'two_fully_connected'
 # The size of the input layer
 INPUT_SIZE = 1083
 # The size of the output layer
-CMD_SIZE = 2
+OUTPUT_SIZE = 2
 
 def learning_rate(initial, max_step_number):
     """
@@ -39,10 +39,10 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, output_n
             
         weights_hidden_6, biases_hidden_6 = __get_variable__(6, INPUT_SIZE, 2048)
         weights_hidden_7, biases_hidden_7 = __get_variable__(7, 2048, 2048)
-        weights_hidden_8, biases_hidden_8 = __get_variable__(8, 2048, 1024)
-        weights_out = tf.get_variable('weights_out', [1024, CMD_SIZE],
+        weights_hidden_8, biases_hidden_8 = __get_variable__(8, 2048, 2048)
+        weights_out = tf.get_variable('weights_out', [1024, OUTPUT_SIZE],
                         initializer=tf.truncated_normal_initializer(stddev=0.1))
-        biases_out = tf.get_variable('biases_out', [CMD_SIZE],
+        biases_out = tf.get_variable('biases_out', [OUTPUT_SIZE],
                         initializer=tf.constant_initializer(0.0))
 
     hidden_6 = tf.nn.relu(tf.add(tf.matmul(data, weights_hidden_6), biases_hidden_6))
@@ -54,24 +54,24 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, output_n
 
     return prediction
 
-def loss(prediction, cmd):
+def loss(prediction, correct_output_value):
     """
     Define the loss used during the training steps
     """
-    loss_split = tf.reduce_mean(tf.abs(prediction - cmd), 0)
-    loss = tf.reduce_mean(tf.abs(prediction - cmd))
+    loss_split = tf.reduce_mean((prediction - correct_output_value), 0)
+    loss = tf.reduce_mean(tf.abs(prediction - correct_output_value))
     
     weights_hidden_6, biases_hidden_6 = __get_variable__(6, INPUT_SIZE, 2048)
     weights_hidden_7, biases_hidden_7 = __get_variable__(7, 2048, 2048)
     weights_hidden_8, biases_hidden_8 = __get_variable__(8, 2048, 1024)
-    weights_out = tf.get_variable('weights_out', [1024, CMD_SIZE], initializer=tf.truncated_normal_initializer(stddev=0.1))
-    biases_out = tf.get_variable('biases_out', [CMD_SIZE], initializer=tf.constant_initializer(0.0))
-    
+    weights_out = tf.get_variable('weights_out', [1024, OUTPUT_SIZE], initializer=tf.truncated_normal_initializer(stddev=0.1))
+    biases_out = tf.get_variable('biases_out', [OUTPUT_SIZE], initializer=tf.constant_initializer(0.0))
+     
     regularizers = (tf.nn.l2_loss(weights_hidden_6) + tf.nn.l2_loss(biases_hidden_6) + 
                     tf.nn.l2_loss(weights_hidden_7) + tf.nn.l2_loss(biases_hidden_7) +
                     tf.nn.l2_loss(weights_hidden_8) + tf.nn.l2_loss(biases_hidden_8) +
                     tf.nn.l2_loss(weights_out) + tf.nn.l2_loss(biases_out))
-    
+     
     loss += 1e-3 * regularizers
 
     return loss, loss_split
@@ -85,11 +85,11 @@ def training(loss, loss_split, learning_rate, global_step):
 
     return train_op
 
-def evaluation(prediction, cmd):
+def evaluation(prediction, correct_output_value):
     """
     Define how to evaluate the model
     """
-    loss_split = tf.reduce_mean(tf.abs(prediction - cmd), 0)
-    loss = tf.reduce_mean(tf.abs(prediction - cmd))
+    loss_split = tf.reduce_mean((prediction - correct_output_value), 0)
+    loss = tf.reduce_mean(tf.abs(prediction - correct_output_value))
 
     return loss, loss_split
