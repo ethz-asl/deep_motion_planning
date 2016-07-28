@@ -7,7 +7,9 @@ import numpy as np
 import pylab as pl
 import time
 import logging
-
+import pickle
+import os
+from time_msg_container import *
 # Messages
 from geometry_msgs.msg import Twist, PoseStamped, Point, Quaternion
 from sensor_msgs.msg import LaserScan
@@ -20,18 +22,6 @@ from deep_motion_planner.deep_motion_planner import DeepMotionPlanner
 import deep_motion_planner.util as dmp_util
 
 
-class TimeMsgContainer():
-  
-  def __init__(self):
-    self.times = []
-    self.msgs = []
-    
-  def __len__(self):
-    if (len(self.times) == len(self.msgs)):
-      return len(self.times)
-    else:
-      raise Exception("There's something wrong with the vector lengths.")
-
 def parse_args():
     """
     Parse input arguments.
@@ -42,6 +32,12 @@ def parse_args():
     parser.add_argument('-f', '--protobufFile', help='name of the protobuf file that comprises the model structure', type=str, default="model.pb")
     args = parser.parse_args()
     return args
+  
+def save_data(data, storage_path):
+  answer = raw_input('Do you want to save the data? ')
+  if answer.lower() == 'y' or answer.lower() == 'yes':
+    filename = raw_input('Please enter the desired filename: ')
+    pickle.dump(data, open(storage_path + "/" + filename, 'wb'))  
   
 def plot_velocities(ax_trans, ax_rot, velocities, color='b', linestyle='-', label=None):
   t_vec = [rt.to_sec() for rt in velocities.times]
@@ -81,42 +77,47 @@ plot_velocities_switch = True
 plot_trajectory_switch = False
 plot_errors_swtich = True
 logger = logging.Logger('deep_evaluation', level=20) # INFO: 20 | DEBUG: 10
+data_storage = {}
 ##############################################
 
 # Get data
 bag = rosbag.Bag(args.logPath)
+
 
 # Get ros planner commands
 vel_cmd_ros_msgs = TimeMsgContainer()
 for topic, msg, t in bag.read_messages(topics=['/ros_planner/cmd_vel']):
   vel_cmd_ros_msgs.times.append(t)
   vel_cmd_ros_msgs.msgs.append(msg)
+# data_storage['vel_cmd_ros_msgs'] = vel_cmd_ros_msgs
 
 # Get deep planenr commands
 vel_cmd_deep_msgs = TimeMsgContainer()
 for topic, msg, t in bag.read_messages(topics=['/deep_planner/cmd_vel']):
   vel_cmd_deep_msgs.times.append(t)
   vel_cmd_deep_msgs.msgs.append(msg)
+# data_storage['vel_cmd_deep_msgs'] = vel_cmd_deep_msgs
 
 # Get scans 
 scan_msgs = TimeMsgContainer()
 for topic, msg, t in bag.read_messages(topics=['/base_scan']):
   scan_msgs.times.append(t)
   scan_msgs.msgs.append(msg)
+# data_storage['scan_msgs'] = scan_msgs
 
 # Get published goal positions 
 goal_msgs = TimeMsgContainer()
 for topic, msg, t in bag.read_messages(topics=['/move_base/current_goal']):
   goal_msgs.times.append(t)
   goal_msgs.msgs.append(msg)
-
+# data_storage['goal_msgs'] = goal_msgs
   
 # Get position/localization messages
 loc_msgs = TimeMsgContainer()
 for topic, msg, t in bag.read_messages(topics=['/move_base/feedback']):
   loc_msgs.times.append(t)
   loc_msgs.msgs.append(msg)
-
+# data_storage['loc_msgs'] = loc_msgs
 
 # Compute deep plans for timestamps
 time_vec = vel_cmd_ros_msgs.times
@@ -134,7 +135,7 @@ with TensorflowWrapper(args.modelPath, args.protobufFile, False) as tf_wrapper:
     vel_cmd_deep.times.append(t)
     vel_cmd_deep.msgs.append(compute_deep_plan(tf_wrapper, scan_ranges=current_scan.ranges, relative_target=relative_target))
   print("Avg. model query time was {0} ms".format((time.time()-t_start) * 1000.0 / len(time_vec)))
-
+data_storage['vel_cmd_deep'] = vel_cmd_deep
 
 # Run evaluation
 vel_trans_diff = np.zeros([len(vel_cmd_deep),1])
@@ -150,6 +151,11 @@ std_trans_error = np.std(vel_trans_diff)
 mean_rot_error = np.mean(vel_rot_diff)
 std_rot_error = np.std(vel_rot_diff)
 
+data_storage['trans_error'] = (mean_trans_error, std_trans_error)
+data_storage['rot_error'] = (mean_rot_error, std_rot_error)
+
+save_data(data_storage, '../data/')
+
 print("Translational velocities: ")
 print("\tMean error: {0}".format(mean_trans_error))
 print("\tStandard dev: {0}".format(std_trans_error))
@@ -163,7 +169,6 @@ if plot_velocities_switch:
   ax_trans = pl.subplot(211)
   ax_rot = pl.subplot(212)
   plot_velocities(ax_trans, ax_rot, vel_cmd_ros_msgs, color='r', linestyle='-', label='ros')
-#   plot_velocities(ax_trans, ax_rot, vel_cmd_deep_msgs, color='b', linestyle='-', label='deep_msg')
   plot_velocities(ax_trans, ax_rot, vel_cmd_deep, color='g', linestyle='-', label='deep')
   ax_trans.set_ylim([-1., 1.])
   ax_trans.set_ylabel('trans_vel [m/s]')
@@ -172,6 +177,8 @@ if plot_velocities_switch:
   ax_rot.set_ylabel('rot_vel [rad/s]')
   ax_rot.set_xlabel('time [s]')
   ax_rot.grid('on')
+
+
 
 # Trajectory
 if plot_trajectory_switch:
