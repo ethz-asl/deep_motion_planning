@@ -5,40 +5,49 @@
 
 #include <vector>
 
-inline int sign(const double x) {
-  return x >= 0 ? 1 : -1;
-}
+inline int sign(const double x) { return x >= 0 ? 1 : -1; }
 
-class SafetyModule {
+class SafetyModule
+{
 
- public:
+public:
   typedef Eigen::Matrix<double, 2, Eigen::Dynamic> LaserMeasurementMatrix;
 
-  SafetyModule() { }
-  SafetyModule(double robotRadius, double minimumDistanceToRobot, double timeOffset, double maximumDeceleration);
-  ~SafetyModule() { }
+  SafetyModule() {}
+  SafetyModule(double robotRadius, double minimumDistanceToRobot, double timeOffset,
+               double maximumDeceleration);
+  ~SafetyModule() {}
 
-  bool motionIsSafe(const Eigen::Vector2d& currentPosition, const Eigen::Quaterniond& currentOrientation,
-                      const double transVel, const double rotVel,
-                      const std::vector<Eigen::Vector2d>& pointsLaser);
+  bool motionIsSafe(const Eigen::Vector2d& currentPosition,
+                    const Eigen::Quaterniond& currentOrientation, const double transVel,
+                    const double rotVel, const std::vector<Eigen::Vector2d>& pointsLaser);
 
-  void reset() { _motionIsSafe = true; _statusMsg.clear(); }
+  void reset()
+  {
+    _motionIsSafe = true;
+    _statusMsg.clear();
+  }
 
   double computeStoppingDistance(const double transVel);
 
   Eigen::Vector2d transformPointPolar2KarthesianCoordinates(const double range, const double alpha);
 
-  int getSignOfDistance(const Eigen::Hyperplane<double, 2>& hyperplane, const Eigen::Vector2d& point);
+  int getSignOfDistance(const Eigen::Hyperplane<double, 2>& hyperplane,
+                        const Eigen::Vector2d& point);
 
-  Eigen::Vector2d computeStoppingPoint(const double transVel, const double rotVel, const Eigen::Vector2d& positionStart, const Eigen::Vector2d& positionCenter);
+  Eigen::Vector2d computeStoppingPoint(const double transVel, const double rotVel,
+                                       const Eigen::Vector2d& positionStart,
+                                       const Eigen::Vector2d& positionCenter);
 
-  Eigen::Vector2d computeRotationCenterOfTrajectory(const double radius, const double transVel, const double rotVel,
-                                                     const Eigen::Vector2d& positionStart,
-                                                     const Eigen::Vector2d& currentHeading);
+  Eigen::Vector2d computeRotationCenterOfTrajectory(const double radius, const double transVel,
+                                                    const double rotVel,
+                                                    const Eigen::Vector2d& positionStart,
+                                                    const Eigen::Vector2d& currentHeading);
 
   double computeTrajectoryRadius(const double transVel, const double rotVel);
 
-  bool objectTooClose(const Eigen::Vector2d& laserMeas, const Eigen::Vector2d& positionRobot, double& laserPointDistToCenterSquared);
+  bool objectTooClose(const Eigen::Vector2d& laserMeas, const Eigen::Vector2d& positionRobot,
+                      double& laserPointDistToCenterSquared);
 
   double getRotVelThreshold() const { return _rotVelThreshold; }
   void setRotVelThreshold(double rotVelThreshold = 1e-3) { _rotVelThreshold = rotVelThreshold; }
@@ -62,27 +71,29 @@ class SafetyModule {
   void setMinLateralDist(double minLateralDist) { _minimumLateralDistance = minLateralDist; }
 
   double getMinLongitudinalDist() const { return _minimumLongitudinalDistance; }
-  void setMinLongitudinalDist(double minLongitudinalDist) { _minimumLongitudinalDistance = minLongitudinalDist; }
+  void setMinLongitudinalDist(double minLongitudinalDist)
+  {
+    _minimumLongitudinalDistance = minLongitudinalDist;
+  }
 
   const std::string& getStatusMessage() const { return _statusMsg; }
 
- private:
+private:
   // parameters
-  double _robotRadius = 0.35;
-  double _minimumDistanceToRobot = 0.02; // m
-  double _timeOffset = 0.0; // s (time until sent velocity command gets executed by the robot)
-  double _maxDeceleration = 1.0; // m/s^2
-  double _rotVelThreshold = 1e-3; // rad/s
-  double _distSensorToEdge = 0.1; // m
-  double _minimumDistanceToSensor = 0.0;
-  double _minimumLateralDistance = 0.02;
+  double _robotRadius            = 0.35;
+  double _minimumDistanceToRobot = 0.02;  // m
+  double _timeOffset      = 0.0;  // s (time until sent velocity command gets executed by the robot)
+  double _maxDeceleration = 1.0;  // m/s^2
+  double _rotVelThreshold = 1e-3;             // rad/s
+  double _distSensorToEdge            = 0.1;  // m
+  double _minimumDistanceToSensor     = 0.0;
+  double _minimumLateralDistance      = 0.02;
   double _minimumLongitudinalDistance = 0.07;
 
   // safety state
   bool _motionIsSafe = true;
 
   std::string _statusMsg;
-
 };
 
 #endif /* SAFETYMODULE_H_ */
