@@ -70,13 +70,13 @@ class SafetyModule {
   // parameters
   double _robotRadius = 0.35;
   double _minimumDistanceToRobot = 0.02; // m
-  double _timeOffset = 0.3; // s (time until sent velocity command gets executed by the robot)
+  double _timeOffset = 0.0; // s (time until sent velocity command gets executed by the robot)
   double _maxDeceleration = 1.0; // m/s^2
   double _rotVelThreshold = 1e-3; // rad/s
   double _distSensorToEdge = 0.1; // m
   double _minimumDistanceToSensor = 0.0;
   double _minimumLateralDistance = 0.02;
-  double _minimumLongitudinalDistance = 0.12;
+  double _minimumLongitudinalDistance = 0.07;
 
   // safety state
   bool _motionIsSafe = true;

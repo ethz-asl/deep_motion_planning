@@ -11,7 +11,7 @@
       <remap from="/cmd_vel" to="/unchecked_cmd_vel"/>
       <remap from="/cmd_vel_stamped" to="/unchecked_cmd_vel_stamped"/>
     </node>
-    <node name="safety_module_node" pkg="safety_module" type="safety_module_node" />
+    <node name="safety_module_node" pkg="safety_module" type="safety_module_node" output="screen"/>
   </group>
 
 

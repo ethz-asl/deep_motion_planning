@@ -50,6 +50,10 @@ namespace safety_module
     {
       std_msgs::Empty msg;
       _safetyInterruptPub.publish(msg);
+
+      // Publish a message with zeros
+      geometry_msgs::Twist output;
+      _cmdPub.publish(output);
     }
     // TODO Handle reset more carefully
     _safetyModule.reset();
