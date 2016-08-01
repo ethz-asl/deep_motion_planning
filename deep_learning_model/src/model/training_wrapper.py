@@ -6,9 +6,10 @@ import time
 import getpass
 
 import tensorflow as tf
+import numpy as np
 
 from data.custom_data_runner import CustomDataRunner
-from data.fast_data_handler import FastDataHandler
+from data.data_handler import DataHandler
 import conv_model as model
 
 class TrainingWrapper():
@@ -19,7 +20,8 @@ class TrainingWrapper():
         self.runners = None
         self.sess = None
         self.custom_data_runner = None
-        self.eval_n_elements = 4*8192 
+        self.eval_n_elements = 8*8192
+        self.eval_batch_size = 1024
 
     def __enter__(self):
         return self
@@ -118,8 +120,9 @@ class TrainingWrapper():
                     logger.warning('No weights are loaded!')
                     logger.warning('File does not exist: {}'.format(self.args.weight_initialize))
 
-            with FastDataHandler(self.args.datafile_eval, self.eval_n_elements, self.eval_n_elements) as data_handler_eval:
-                (X_eval,Y_eval) = data_handler_eval.next_batch()
+            logger.info('Load the evaluation data')
+            (X_eval,Y_eval) = DataHandler(self.args.datafile_eval, self.eval_n_elements,
+                    shuffle=False).next_batch()
 
             loss_train = 0.0
             # Perform all training steps
@@ -147,19 +150,40 @@ class TrainingWrapper():
                     duration_vector[((step % self.args.eval_steps)//100)] = duration
 
                 # Evaluatie the model
-                if False: #step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
+                if step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
                     start_eval = time.time()
 
                     # Evaluate the model. We use only a constant fraction of the entire dataset to
                     # reduce the computation time, yet get a rough estimate of the model's
                     # generalization performance
-                    feed_dict = {eval_data_placeholder: X_eval, eval_cmd_placeholder: Y_eval,
-                            keep_prob_placeholder: 1.0}
-                    loss_value, loss_split_value = self.sess.run([evaluation, evaluation_split], feed_dict=feed_dict)
 
-                    summary_str = self.sess.run(eval_summary_op, feed_dict=feed_dict)
+                    # Create an empty array, that has the correct size for to hold all predictions
+                    eval_predictions = np.zeros([self.eval_n_elements,2], dtype=np.float)
+
+                    # Evaluate the data in batches and capture the predictions
+                    for index in range(self.eval_n_elements // self.eval_batch_size):
+                        start_index = index*self.eval_batch_size
+                        end_index = (index+1)*self.eval_batch_size
+                        feed_dict = {
+                                eval_data_placeholder: X_eval[start_index:end_index,:],
+                                eval_cmd_placeholder: Y_eval[start_index:end_index,:],
+                                keep_prob_placeholder: 1.0
+                                }
+                        eval_predictions[start_index:end_index,:] = self.sess.run([eval_prediction],
+                                feed_dict=feed_dict)[0]
+
+                    # Finally evaluate the predictions and compute the scores
+                    feed_dict = {
+                            eval_predictions_placeholder: eval_predictions,
+                            eval_cmd_placeholder:  Y_eval,
+                            keep_prob_placeholder: 1.0
+                            }
+
+                    loss_value, loss_split_value, summary_str = self.sess.run([evaluation,
+                        evaluation_split, eval_summary_op], feed_dict=feed_dict)
 
                     duration_eval = time.time() - start_eval
+
                     logger.info('Evaluattion: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
 
                     eval_summary_writer.add_summary(summary_str, step)
