@@ -46,15 +46,19 @@ class TrainingWrapper():
         # Folder where to store snapshots, meta data and the final model
         storage_path = os.path.join(self.args.train_dir, (time.strftime('%Y-%m-%d_%H-%M_') + model.NAME))
 
+        logger.info('Build Tensorflow Graph')
         with tf.Graph().as_default():
 
             # Define the used machine learning model
             global_step, learning_rate = model.learning_rate(self.args.learning_rate)
 
             self.sess = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=8))
+
+            logger.info('Create the data runner for the input data')
             self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**18)
             data_batch, cmd_batch = self.custom_data_runner.get_inputs()
 
+            logger.info('Add operations to the computation graph')
             keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
             prediction = model.inference(data_batch, keep_prob_placeholder, output_name='prediction')
 
@@ -105,6 +109,8 @@ class TrainingWrapper():
 
             if self.args.weight_initialize:
 
+                logger.info('Initialize with weights from another model')
+
                 if os.path.exists(self.args.weight_initialize):
                     saver.restore(self.sess, self.args.weight_initialize)
                     logger.info('Model restored: {}'.format(self.args.weight_initialize))
@@ -117,11 +123,13 @@ class TrainingWrapper():
 
             loss_train = 0.0
             # Perform all training steps
+
+            logger.info('Training begins')
             for step in range(self.args.max_steps):
                 start_time = time.time()
 
                 feed_dict = {keep_prob_placeholder: 0.5}
-                _, loss_value, loss_split_value = self.sess.run([train_op, loss, loss_split],
+                _, loss_value, loss_split_value, summary_str = self.sess.run([train_op, loss, loss_split, summary_op],
                         feed_dict=feed_dict)
 
                 duration = time.time() - start_time
@@ -131,7 +139,6 @@ class TrainingWrapper():
                     # Print status to stdout.
                     logger.info('Step {}: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(step,
                         loss_split_value[0], loss_split_value[1], duration/1e-3))
-                    summary_str = self.sess.run(summary_op, feed_dict=feed_dict)
                     summary_writer.add_summary(summary_str, step)
                     summary_writer.flush()
                     loss_train = loss_value
