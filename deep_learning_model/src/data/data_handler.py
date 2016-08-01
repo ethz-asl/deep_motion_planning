@@ -4,9 +4,10 @@ import numpy as np
 
 class DataHandler():
     """Class to load data from HDF5 storages in a random and chunckwise manner"""
-    def __init__(self, filepath, chunksize=1000):
+    def __init__(self, filepath, chunksize=1000, shuffle = True):
         self.filepath = filepath
         self.chunksize = chunksize
+        self.shuffle = shuffle
 
         if not os.path.exists(filepath):
             raise IOError('File does not exists: {}'.format(filepath))
@@ -30,7 +31,10 @@ class DataHandler():
         @rtype Generator
         """
         current_index = 0
-        permutation = np.random.permutation(self.nrows)
+        if self.shuffle:
+            permutation = np.random.permutation(self.nrows)
+        else:
+            permutation = np.arange(self.nrows)
         while True:
             yield permutation[current_index:current_index+self.chunksize]
             current_index += self.chunksize
@@ -72,7 +76,6 @@ class DataHandler():
 
         return (df.iloc[:, data_columns].copy(deep=True).values,
                 df.iloc[:, cmd_columns].copy(deep=True).values)
-            
 
 
         
