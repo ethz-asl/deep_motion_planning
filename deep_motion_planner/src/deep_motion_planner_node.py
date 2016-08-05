@@ -2,7 +2,7 @@
 
 import rospy
 
-from deep_motion_planner import DeepMotionPlanner
+from deep_motion_planner.deep_motion_planner import DeepMotionPlanner
 
 def main():
     
