@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
+SET(CMAKE_CXX_FLAGS "-std=c++0x")
+
 ## Find system dependencies
 find_package(Eigen3 REQUIRED)
 
