@@ -26,6 +26,8 @@ class DeepMotionPlanner():
             rospy.logerr('Missing parameter: ~model_path')
             exit()
 
+        self.laser_scan_stride = rospy.get_param('~laser_scan_stride', 2) # Take every ith element
+        self.n_laser_scans = rospy.get_param('~n_laser_scans', 540) # Cut n elements from the center to adjust the length
         self.model_path = rospy.get_param('~model_path')
         self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
         self.use_checkpoints = rospy.get_param('~use_checkpoints', False)
@@ -111,7 +113,9 @@ class DeepMotionPlanner():
                         
                 # Prepare the input vector, perform the inference on the model 
                 # and publish a new command
-                input_data = list(self.last_scan.ranges) + list(target)
+                scans = list(self.last_scan.ranges[::self.laser_scan_stride])
+                cut_n_elements = (len(scans) - self.n_laser_scans) // 2
+                input_data = scans[cut_n_elements:-cut_n_elements] + list(target)
 
                 linear_x, angular_z = tf_wrapper.inference(input_data)
 
