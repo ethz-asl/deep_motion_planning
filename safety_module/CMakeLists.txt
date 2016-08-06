@@ -16,6 +16,13 @@ SET(CMAKE_CXX_FLAGS "-std=c++0x")
 ## Find system dependencies
 find_package(Eigen3 REQUIRED)
 
+catkin_package(
+  INCLUDE_DIRS include
+  # LIBRARIES safety_module
+  # CATKIN_DEPENDS geometry_msgs roscpp sensor_msgs
+  # DEPENDS system_lib
+  )
+
 ###########
 ## Build ##
 ###########
