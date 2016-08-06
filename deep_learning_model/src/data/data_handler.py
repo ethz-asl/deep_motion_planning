@@ -52,12 +52,26 @@ class DataHandler():
         df = pd.read_hdf(self.filepath, 'data', where='index=ind')
 
         # Separate the data into the returned frames
-        data_columns = [column for column in df.columns 
-                if column.split('_')[0] in ['laser','target'] and not column.split('_')[1] == 'id']
+        laser_columns = list()
+        target_columns = list()
+        cmd_columns = list()
+        for j,column in enumerate(chunk.columns):
+            if column.split('_')[0] == 'laser':
+                laser_columns.append(j)
+            if column.split('_')[0] == 'target'\
+                and not column.split('_')[1] == 'id':
+                target.append(j)
+            if column in ['linear_x','angular_z']:
+                cmd_columns.append(j)
 
-        data = df[data_columns]
-        cmd = df[['linear_x','angular_z']]
-        return (data.values,cmd.values)
+        # Only use the center 540 elements as input
+        drop_n_elements = (len(laser_columns) - 540) // 2
+        laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+        
+        data_columns = laser_columns + target_columns
+
+        return (df.iloc[:, data_columns].copy(deep=True).values,
+                df.iloc[:, cmd_columns].copy(deep=True).values)
             
 
 
