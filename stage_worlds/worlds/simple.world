@@ -2,7 +2,7 @@
 # $Id$
 
 include "map.inc"
-include "europa/europa.inc"
+include "turtlebot/turtlebot.inc"
 include "window.inc"
 
 interval_sim            40
@@ -23,8 +23,8 @@ floorplan
   bitmap "bitmaps/simple.png"
 )
 
-europa
+turtlebot
 (
-	name "europa"
+	name "turtlebot"
 	pose [-3.0 0.0 0 90.0]
 )
