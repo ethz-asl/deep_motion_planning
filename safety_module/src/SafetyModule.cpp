@@ -20,8 +20,8 @@ bool SafetyModule::motionIsSafe(const Eigen::Vector2d& currentPosition,
 
   if (transVel < 0) {
     ROS_WARN_STREAM_NAMED("safety_module",
-                          "TransVel is negative: " << transVel << ". This is currently unsafe!");
-    return false;
+                          "TransVel is negative: " << transVel << ". This is currently unsafe, but not prevented!");
+    return true;
   }
 
   std::ostringstream os;

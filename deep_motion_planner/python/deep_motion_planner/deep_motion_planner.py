@@ -115,7 +115,10 @@ class DeepMotionPlanner():
                 # and publish a new command
                 scans = list(self.last_scan.ranges[::self.laser_scan_stride])
                 cut_n_elements = (len(scans) - self.n_laser_scans) // 2
-                input_data = scans[cut_n_elements:-cut_n_elements] + list(target)
+                if cut_n_elements > 0:
+                    input_data = scans[cut_n_elements:-cut_n_elements] + list(target)
+                else:
+                    input_data = scans + list(target)
 
                 linear_x, angular_z = tf_wrapper.inference(input_data)
 

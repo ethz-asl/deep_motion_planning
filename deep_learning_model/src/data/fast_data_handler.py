@@ -92,7 +92,7 @@ class FastDataHandler():
                             laser_columns.append(j)
                         if column.split('_')[0] == 'target'\
                             and not column.split('_')[1] == 'id':
-                            target.append(j)
+                            target_columns.append(j)
                         if column in ['linear_x','angular_z']:
                             cmd_columns.append(j)
 
