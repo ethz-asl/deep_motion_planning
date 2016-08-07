@@ -10,7 +10,7 @@ namespace safety_module
 
 SafetyModuleWrapper::SafetyModuleWrapper()
     : _safetyModule(0.18, 0.01, 0.0, 20.0), _nh("~"), _laserSub(_nh, "/base_scan", 1),
-      _cmdSub(_nh, "/unchecked_cmd_vel_stamped", 1), _sync(_laserSub, _cmdSub, 10)
+      _cmdSub(_nh, "/deep_planner/cmd_vel_stamped", 1), _sync(_laserSub, _cmdSub, 10)
 {
   _safetyInterruptPub = _nh.advertise<std_msgs::Empty>("/safety_interrupt", 1);
   _cmdPub             = _nh.advertise<geometry_msgs::Twist>("/cmd_vel", 1);

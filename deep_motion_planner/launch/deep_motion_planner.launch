@@ -5,6 +5,6 @@
     <param name="model_path" type="string" value="$(find deep_motion_planner)/models/" />
     <param name="use_checkpoints" type="bool" value="False" />
     <param name="protobuf_file" type="string" value="model.pb" />
-    <remap from="/cmd_vel" to="/unchecked_cmd_vel"/>
+    <remap from="/cmd_vel" to="/deep_planner/cmd_vel"/>
   </node>
 </launch>
