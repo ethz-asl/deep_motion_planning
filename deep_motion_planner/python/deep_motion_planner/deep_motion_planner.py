@@ -115,10 +115,15 @@ class DeepMotionPlanner():
                 # and publish a new command
                 scans = list(self.last_scan.ranges[::self.laser_scan_stride])
                 cut_n_elements = (len(scans) - self.n_laser_scans) // 2
+                cropped_scans = scans
                 if cut_n_elements > 0:
-                    input_data = scans[cut_n_elements:-cut_n_elements] + list(target)
-                else:
-                    input_data = scans + list(target)
+                  rospy.logdebug("Cutting input vector by {0} elements on each side.".format(cut_n_elements))
+                  cropped_scans = scans[cut_n_elements:-cut_n_elements]
+                if len(cropped_scans)==self.n_laser_scans+1:
+                  rospy.logdebug("Input vector has one scan too much. Cutting off last one.")
+                  cropped_scans = cropped_scans[0:-1]
+                
+                input_data = cropped_scans + list(target)
 
                 linear_x, angular_z = tf_wrapper.inference(input_data)
 
