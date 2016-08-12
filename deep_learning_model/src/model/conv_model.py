@@ -31,7 +31,7 @@ def __get_variable__(index, input_size, output_size):
                         initializer=tf.contrib.layers.xavier_initializer()),
                         tf.get_variable('biases_hidden{}'.format(index), [output_size]))
 
-def inference(data, keep_prob, reuse=False, output_name='prediction'):
+def inference(data, keep_prob, sample_size, training=True, reuse=False, output_name='prediction'):
     """
     Define the deep neural network used for inference
     """

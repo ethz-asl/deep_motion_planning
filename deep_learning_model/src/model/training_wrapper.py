@@ -35,9 +35,9 @@ class TrainingWrapper():
         if self.sess:
             self.sess.close()
 
-    def placeholder_inputs(self, data_size, cmd_size):
+    def placeholder_inputs(self, data_size, cmd_size, data_placeholder_name='data_input'):
         """Create placeholders for the tf graph"""
-        data_placeholder = tf.placeholder(tf.float32, shape=[None, data_size], name='data_input')
+        data_placeholder = tf.placeholder(tf.float32, shape=[None, data_size], name=data_placeholder_name)
         cmd_placeholder = tf.placeholder(tf.float32, shape=[None, cmd_size])
 
         return data_placeholder, cmd_placeholder
@@ -62,16 +62,22 @@ class TrainingWrapper():
 
             logger.info('Add operations to the computation graph')
             keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
-            prediction = model.inference(data_batch, keep_prob_placeholder, output_name='prediction')
+            prediction = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size, output_name='prediction')
 
             loss, loss_split = model.loss(prediction, cmd_batch)
 
             train_op = model.training(loss, loss_split, learning_rate, global_step)
 
-            eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(543, 2)
+            eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(543, 2, 'eval_data_input')
             eval_prediction = model.inference(eval_data_placeholder, keep_prob_placeholder,
-                    reuse=True, output_name='eval_prediction')
-            evaluation, evaluation_split = model.evaluation(eval_prediction, eval_cmd_placeholder)
+                    self.eval_batch_size, training=False, reuse=True, output_name='eval_prediction')
+            eval_predictions_placeholder = tf.placeholder(tf.float32, shape=[self.eval_n_elements,2])
+            evaluation, evaluation_split = model.evaluation(eval_predictions_placeholder, eval_cmd_placeholder)
+
+            # This model is saved with the trained weights and can direclty be executed
+            exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(723, 2)
+            model_inference = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
+                    training=False, reuse=True, output_name='model_inference')
 
             # Variables to use in the summary (shown in tensorboard)
             train_loss = tf.scalar_summary('loss', loss)
@@ -205,7 +211,7 @@ class TrainingWrapper():
             # See:
             # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/freeze_graph.py
             logger.info('Save final model with weights')
-            output_node_names = 'eval_prediction'
+            output_node_names = 'model_inference'
             output_graph_def = tf.python.client.graph_util.convert_variables_to_constants(
                     self.sess, self.sess.graph_def, output_node_names.split(","))
             with tf.gfile.GFile(os.path.join(storage_path, 'model.pb'), "wb") as f:
