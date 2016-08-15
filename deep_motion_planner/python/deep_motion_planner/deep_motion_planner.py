@@ -5,6 +5,7 @@ from geometry_msgs.msg import Twist, PoseStamped
 
 import actionlib
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
+from sensor_msgs.msg import Joy
 
 import tf
 
@@ -20,12 +21,15 @@ class DeepMotionPlanner():
         self.target_pose = None
         self.last_scan = None
         self.freq = 25.0
+        self.send_motion_commands = True
 
         # Load various ROS parameters
         if not rospy.has_param('~model_path'):
             rospy.logerr('Missing parameter: ~model_path')
             exit()
 
+        self.laser_scan_stride = rospy.get_param('~laser_scan_stride', 2) # Take every ith element
+        self.n_laser_scans = rospy.get_param('~n_laser_scans', 540) # Cut n elements from the center to adjust the length
         self.model_path = rospy.get_param('~model_path')
         self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
         self.use_checkpoints = rospy.get_param('~use_checkpoints', False)
@@ -41,12 +45,11 @@ class DeepMotionPlanner():
         # ROS topics
         scan_sub = rospy.Subscriber('scan', LaserScan, self.scan_callback)
         goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_topic_callback)
+        joystick_sub = rospy.Subscriber('/joy', Joy, self.joystick_callback)
         self.cmd_pub  = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
         # We over the same action api as the move base package
-        self._as = actionlib.SimpleActionServer('deep_move_base',
-                MoveBaseAction, auto_start =
-                False)
+        self._as = actionlib.SimpleActionServer('deep_move_base', MoveBaseAction, auto_start = False)
         self._as.register_goal_callback(self.goal_callback)
         self._as.register_preempt_callback(self.preempt_callback)
 
@@ -111,14 +114,25 @@ class DeepMotionPlanner():
                         
                 # Prepare the input vector, perform the inference on the model 
                 # and publish a new command
-                input_data = list(self.last_scan.ranges) + list(target)
+                scans = list(self.last_scan.ranges[::self.laser_scan_stride])
+                cut_n_elements = (len(scans) - self.n_laser_scans) // 2
+                cropped_scans = scans
+                if cut_n_elements > 0:
+                  rospy.logdebug("Cutting input vector by {0} elements on each side.".format(cut_n_elements))
+                  cropped_scans = scans[cut_n_elements:-cut_n_elements]
+                if len(cropped_scans)==self.n_laser_scans+1:
+                  rospy.logdebug("Input vector has one scan too much. Cutting off last one.")
+                  cropped_scans = cropped_scans[0:-1]
+                
+                input_data = cropped_scans + list(target)
 
                 linear_x, angular_z = tf_wrapper.inference(input_data)
 
                 cmd = Twist()
                 cmd.linear.x = linear_x
                 cmd.angular.z = angular_z
-                self.cmd_pub.publish(cmd)
+                if self.send_motion_commands:
+                  self.cmd_pub.publish(cmd)
 
                 # Check if the goal pose is reached
                 self.check_goal_reached(target)
@@ -188,6 +202,7 @@ class DeepMotionPlanner():
         """
         Callback function when a new goal pose is requested
         """
+        self.abort_planning = False
         goal = self._as.accept_new_goal()
         self.target_pose = goal
 
@@ -214,4 +229,21 @@ class DeepMotionPlanner():
 
         # Send the waypoint
         self.navigation_client.send_goal(goal)
+        
+    def joystick_callback(self, data):
+      
+        # Pause planning
+        if data.buttons[4] == 0:
+          rospy.logdebug("Sending motion commands: ON")
+          self.send_motion_commands = True
+        else:
+          self.send_motion_commands = False
+          rospy.logdebug("Sending motion commands: OFF")
+          
+        
+        # Abort planning 
+        if data.buttons[4] == 1 and data.buttons[5] == 1:
+          rospy.loginfo("Planning aborted!")
+          self._as.set_succeeded()
+          
 

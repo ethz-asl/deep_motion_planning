@@ -11,7 +11,7 @@ import tensorflow as tf
 NAME = 'two_fully_connected'
 
 # The size of the input layer
-INPUT_SIZE = 723
+INPUT_SIZE = 543
 # The size of the output layer
 CMD_SIZE = 2
 

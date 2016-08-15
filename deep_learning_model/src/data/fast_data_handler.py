@@ -84,14 +84,24 @@ class FastDataHandler():
 
                 # On the first call, get the column indecies for the input data and the commands
                 if not data_columns:
-                    data_columns = list()
+                    laser_columns = list()
+                    target_columns = list()
                     cmd_columns = list()
                     for j,column in enumerate(chunk.columns):
-                        if column.split('_')[0] in ['laser','target']\
+                        if column.split('_')[0] == 'laser':
+                            laser_columns.append(j)
+                        if column.split('_')[0] == 'target'\
                             and not column.split('_')[1] == 'id':
-                            data_columns.append(j)
+                            target_columns.append(j)
                         if column in ['linear_x','angular_z']:
                             cmd_columns.append(j)
+
+                    # Only use the center 540 elements as input
+                    drop_n_elements = (len(laser_columns) - 540) // 2
+                    laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+                    
+                    data_columns = laser_columns + target_columns
+
 
                 # Return the batches from the current data chunk that is in memory
                 for j in range(chunk.shape[0] // self.batchsize):

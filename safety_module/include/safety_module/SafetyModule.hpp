@@ -80,15 +80,15 @@ public:
 
 private:
   // parameters
-  double _robotRadius            = 0.35;
-  double _minimumDistanceToRobot = 0.02;  // m
+  double _robotRadius            = 0.18;
+  double _minimumDistanceToRobot = 0.01;  // m
   double _timeOffset      = 0.0;  // s (time until sent velocity command gets executed by the robot)
-  double _maxDeceleration = 1.0;  // m/s^2
+  double _maxDeceleration = 20.0;  // m/s^2
   double _rotVelThreshold = 1e-3;             // rad/s
-  double _distSensorToEdge            = 0.1;  // m
+  double _distSensorToEdge            = 0.02;  // m
   double _minimumDistanceToSensor     = 0.0;
-  double _minimumLateralDistance      = 0.02;
-  double _minimumLongitudinalDistance = 0.07;
+  double _minimumLateralDistance      = 0.01;
+  double _minimumLongitudinalDistance = 0.01;
 
   // safety state
   bool _motionIsSafe = true;
