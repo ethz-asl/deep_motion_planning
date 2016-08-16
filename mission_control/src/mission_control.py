@@ -58,12 +58,16 @@ class MissionControl():
 
         if deep_motion_planner:
             self.navigation_client = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
+
+            while not self.navigation_client.wait_for_server(rospy.Duration(5)):
+                rospy.loginfo('Waiting for deep planner action server')
+
         else:
             # connect to the action api of the move_base package
             self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
-        while not self.navigation_client.wait_for_server(rospy.Duration(5)):
-            rospy.loginfo('Waiting for move_base action server')
+            while not self.navigation_client.wait_for_server(rospy.Duration(5)):
+                rospy.loginfo('Waiting for move_base action server')
 
         if stage_simulation:
           rospy.wait_for_service('/reset_positions')
