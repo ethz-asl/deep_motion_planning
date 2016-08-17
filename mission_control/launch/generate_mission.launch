@@ -1,0 +1,6 @@
+<launch>
+  <node name="mission_control" pkg="mission_control" type="mission_control_node.py" output="screen">
+    <param name="mission_file" type="string" value="$(find mission_control)/missions/generate.txt" />
+    <param name="deep_motion_planner" type="bool" value="False" />
+  </node>
+</launch>
