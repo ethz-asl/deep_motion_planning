@@ -1,5 +1,4 @@
 import rospy 
-import rosbag
 import rospkg
 import argparse
 import bisect
@@ -9,15 +8,10 @@ import time
 import logging
 import pickle
 import os
-from planner_comparison.time_msg_container import *
+import progressbar
+
 from planner_comparison.plan_scoring import *
-# Messages
-from geometry_msgs.msg import Twist, PoseStamped, Point, Quaternion
-from sensor_msgs.msg import LaserScan
-from nav_msgs.msg import Path, Odometry
-from move_base_msgs.msg import MoveBaseActionFeedback
-from std_msgs.msg import Empty
-from actionlib_msgs.msg import GoalStatus
+from planner_comparison.roslogs import *
 
 # Deep motion planner
 from deep_motion_planner.tensorflow_wrapper import TensorflowWrapper 
@@ -85,90 +79,33 @@ logger = logging.Logger('deep_evaluation', level=20) # INFO: 20 | DEBUG: 10
 data_storage = {}
 ##############################################
 
-# Get data
-bag = rosbag.Bag(args.logPath)
-msg_container = {}
-
-# Get ros planner commands
-vel_cmd_ros_msgs = TimeMsgContainer()
-for topic, msg, t in bag.read_messages(topics=['/cmd_vel']):
-  vel_cmd_ros_msgs.times.append(t)
-  vel_cmd_ros_msgs.msgs.append(msg)
-msg_container['vel_cmd'] = vel_cmd_ros_msgs
-
-# Get deep planner commands
-# vel_cmd_deep_msgs = TimeMsgContainer()
-# for topic, msg, t in bag.read_messages(topics=['/deep_planner/cmd_vel']):
-#   vel_cmd_deep_msgs.times.append(t)
-#   vel_cmd_deep_msgs.msgs.append(msg)
-# msg_container['vel_cmd_deep'] = vel_cmd_deep_msgs
-
-# Get scans 
-scan_msgs = TimeMsgContainer()
-for topic, msg, t in bag.read_messages(topics=['/base_scan']):
-  scan_msgs.times.append(t)
-  scan_msgs.msgs.append(msg)
-msg_container['scan'] = scan_msgs
-
-# Get published goal positions 
-goal_msgs = TimeMsgContainer()
-for topic, msg, t in bag.read_messages(topics=['/move_base/current_goal']):
-  goal_msgs.times.append(t)
-  goal_msgs.msgs.append(msg)
-msg_container['goal'] = goal_msgs
-  
-# Get position/localization messages
-loc_msgs = TimeMsgContainer()
-for topic, msg, t in bag.read_messages(topics=['/move_base/feedback']):
-  loc_msgs.times.append(t)
-  loc_msgs.msgs.append(msg)
-msg_container['loc'] = loc_msgs
-
-# Odometry data
-odom_msgs = TimeMsgContainer()
-for topic, msg, t in bag.read_messages(topics=['/base_pose_ground_truth']):
-  odom_msgs.times.append(t)
-  odom_msgs.msgs.append(msg)
-msg_container['odom'] = odom_msgs
-
-# Mission start
-start_msgs = TimeMsgContainer()
-for topic, msg, t in bag.read_messages(topics=['/start']):
-  start_msgs.times.append(t)
-  start_msgs.msgs.append(msg)
-msg_container['start'] = start_msgs
-
-# Mission stop
-stop_msgs = TimeMsgContainer()
-for topic, msg, t in bag.read_messages(topics=['/stop']):
-  stop_msgs.times.append(t)
-  stop_msgs.msgs.append(msg)
-msg_container['stop'] = stop_msgs
-
-# Goal status messages
-goal_status_msgs = TimeMsgContainer()
-for topic, msg, t in bag.read_messages(topics=['/move_base/status']):
-  goal_status_msgs.times.append(t)
-  goal_status_msgs.msgs.append(msg)
-msg_container['goal_status'] = goal_status_msgs
+msg_container = get_messages(args.logPath)
 
 if run_comparison:
+  
   # Compute deep plans for timestamps
-  time_vec = vel_cmd_ros_msgs.times
+  time_vec = msg_container['vel_cmd'].times
   vel_cmd_deep = TimeMsgContainer()
   with TensorflowWrapper(args.modelPath, args.protobufFile, False) as tf_wrapper:
+    print('Evaluation progress:')
+    p_bar = progressbar.ProgressBar(widgets=[progressbar.Percentage(), progressbar.Bar(), progressbar.ETA()], 
+                                    maxval=len(time_vec)).start()
     t_start = time.time()
+    cnt = 0
     for t in time_vec:
       # Get appropriate messages
-      current_pos = get_closest_msg_in_past(t, loc_msgs)
-      current_scan = get_closest_msg_in_past(t, scan_msgs)
-      current_goal = get_closest_msg_in_past(t, goal_msgs)
+      current_pos = get_closest_msg_in_past(t, msg_container['loc'])
+      current_scan = get_closest_msg_in_past(t, msg_container['scan'])
+      current_goal = get_closest_msg_in_past(t, msg_container['goal'])
        
        
       # Compute relative target (in robot frame)
       relative_target = dmp_util.compute_relative_target_raw(current_pos.feedback.base_position, current_goal)
       vel_cmd_deep.times.append(t)
       vel_cmd_deep.msgs.append(compute_deep_plan(tf_wrapper, scan_ranges=current_scan.ranges, relative_target=relative_target))
+      cnt +=1
+      p_bar.update(cnt)
+    p_bar.finish()
     print("Avg. model query time was {0} ms".format((time.time()-t_start) * 1000.0 / len(time_vec)))
    
   data_storage['vel_cmd_deep'] = vel_cmd_deep
@@ -177,7 +114,7 @@ if run_comparison:
   vel_trans_diff = np.zeros([len(vel_cmd_deep),1])
   vel_rot_diff = np.zeros([len(vel_cmd_deep),1])
   cnt = 0
-  for v_ros, v_deep in zip(vel_cmd_ros_msgs.msgs, vel_cmd_deep.msgs):
+  for v_ros, v_deep in zip(msg_container['vel_cmd'].msgs, vel_cmd_deep.msgs):
     vel_trans_diff[cnt] = np.abs(v_ros.linear.x - v_deep.linear.x)
     vel_rot_diff[cnt] = np.abs(v_ros.angular.z - v_deep.angular.z) 
     cnt += 1
@@ -204,7 +141,7 @@ if run_comparison:
     pl.figure('Velocity Command Comparison')
     ax_trans = pl.subplot(211)
     ax_rot = pl.subplot(212)
-    plot_velocities(ax_trans, ax_rot, vel_cmd_ros_msgs, color='r', linestyle='-', label='ros')
+    plot_velocities(ax_trans, ax_rot, msg_container['vel_cmd'], color='r', linestyle='-', label='ros')
     plot_velocities(ax_trans, ax_rot, vel_cmd_deep, color='g', linestyle='-', label='deep')
     ax_trans.set_ylim([-1., 1.])
     ax_trans.set_ylabel('trans_vel [m/s]')
