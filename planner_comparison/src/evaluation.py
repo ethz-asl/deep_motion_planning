@@ -9,8 +9,8 @@ import time
 import logging
 import pickle
 import os
-from time_msg_container import *
-from plan_scoring import *
+from planner_comparison.time_msg_container import *
+from planner_comparison.plan_scoring import *
 # Messages
 from geometry_msgs.msg import Twist, PoseStamped, Point, Quaternion
 from sensor_msgs.msg import LaserScan
@@ -80,7 +80,7 @@ args = parse_args()
 plot_velocities_switch = True
 plot_trajectory_switch = False
 plot_errors_swtich = True
-run_comparison = False
+run_comparison = True
 logger = logging.Logger('deep_evaluation', level=20) # INFO: 20 | DEBUG: 10
 data_storage = {}
 ##############################################

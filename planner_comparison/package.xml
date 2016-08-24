@@ -8,6 +8,5 @@
   <buildtool_depend>catkin</buildtool_depend>
   <buildtool_depend>catkin_simple</buildtool_depend>
   <depend>rospy</depend>
-  <depend>deep_motion_planner</depend>
  
 </package>
