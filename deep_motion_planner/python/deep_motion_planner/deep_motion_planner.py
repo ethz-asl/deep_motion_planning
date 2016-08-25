@@ -295,3 +295,4 @@ class DeepMotionPlanner():
         path.poses.append(new_pose)
         
       self.deep_plan_pub.publish(path)
+
