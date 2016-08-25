@@ -26,9 +26,7 @@ class Mission():
     self.start_time = rospy.Time()
     self.end_time = rospy.Time()
       
-    self.params = {'threshold_range': 0.2, 
-                   'rotation_energy_weight': 3.0,
-                   'translation_energy_weight': 1.0}
+    self.params = {'threshold_range': 0.3}
     
   def duration(self):
     return (self.end_time - self.start_time).to_sec()
@@ -57,6 +55,13 @@ class Mission():
       return self.distance()/self.duration()
     else: 
       return 0.0
+  
+  def inverse_avg_speed(self):
+    avg_speed = self.avg_speed()
+    if avg_speed > 0:
+      return 1/avg_speed
+    else:
+      return 100
     
   def acceleration_vector(self):
     acc_trans = np.zeros([len(self.odom_msgs)])
@@ -69,33 +74,41 @@ class Mission():
       v_trans = math.hypot(self.odom_msgs.msgs[ii].twist.twist.linear.x, self.odom_msgs.msgs[ii].twist.twist.linear.y)
       v_rot = self.odom_msgs.msgs[ii].twist.twist.angular.z
       t_diff = (t - t_prev).to_sec()
-      acc_trans[ii] = (v_trans - v_trans_prev) / t_diff
-      acc_rot[ii] = (v_rot - v_rot_prev) / t_diff
+      if t_diff > 0:
+        acc_trans[ii] = (v_trans - v_trans_prev) / t_diff
+        acc_rot[ii] = (v_rot - v_rot_prev) / t_diff
     return acc_trans, acc_rot
   
-  def energy(self):
-    """
-    acceleration based energy during mission
-    """
+  def rotational_energy(self):
     acc_trans, acc_rot = self.acceleration_vector()
-    return self.params['translation_energy_weight'] * np.sum(np.abs(acc_trans)) + self.params['rotation_energy_weight'] * np.sum(np.abs(acc_trans))
+    return np.sum(np.abs(acc_rot))
 
+  def translational_energy(self):
+    acc_trans, acc_rot = self.acceleration_vector()
+    return np.sum(np.abs(acc_trans))
+  
   def normalized_energy(self):
     return self.energy()/self.duration()
   
   def final_goal_dist(self):
-    return math.hypot(self.odom_msgs.msgs[-1].pose.pose.position.x - self.goal.pose.position.x, 
-                      self.odom_msgs.msgs[-1].pose.pose.position.y - self.goal.pose.position.y)
+    try:
+      return math.hypot(self.odom_msgs.msgs[-1].pose.pose.position.x - self.goal.pose.position.x, 
+                        self.odom_msgs.msgs[-1].pose.pose.position.y - self.goal.pose.position.y)
+    except (AttributeError):
+      return math.hypot(self.odom_msgs.msgs[-1].pose.pose.position.x - self.goal.goal.target_pose.pose.position.x, 
+                        self.odom_msgs.msgs[-1].pose.pose.position.y - self.goal.goal.target_pose.pose.position.y)
 
-  def compute_mission_cost(self):
-    feature_list = [self.energy, self.object_closeness, self.final_goal_dist, self.avg_speed]
-    feature_weights = [1] * len(feature_list)
+  def compute_cost(self):
+    feature_list = [self.rotational_energy, self.translational_energy, self.obstacle_closeness, self.final_goal_dist, self.inverse_avg_speed]
+    feature_weights = [0.1, 0.1, 1.0, 5.0, 2.0]
     
     cost = 0.0
+    cost_dict = {}
     for f, w in zip(feature_list, feature_weights):
-      cost += w * f()
-      
-    return cost
+      feature_cost = f()
+      cost += w * feature_cost
+      cost_dict[f.__name__] = w * feature_cost
+    return cost, cost_dict 
     
 
 def adjust_start_stop_msgs(start_msgs, stop_msgs):
@@ -134,7 +147,8 @@ def extract_missions(msg_container):
     data = Mission()
     data.start_time = start_msgs.times[ii]
     data.end_time = stop_msgs.times[ii]
-    data.loc_msgs = msg_container['loc'].get_data_for_interval(data.start_time, data.end_time)
+    if len(msg_container['loc']) > 0:
+      data.loc_msgs = msg_container['loc'].get_data_for_interval(data.start_time, data.end_time) 
     data.odom_msgs = msg_container['odom'].get_data_for_interval(data.start_time, data.end_time)
     data.vel_cmd_msgs = msg_container['vel_cmd'].get_data_for_interval(data.start_time, data.end_time)
     data.scan_msgs = msg_container['scan'].get_data_for_interval(data.start_time, data.end_time)

@@ -11,7 +11,7 @@ import os
 import progressbar
 
 from planner_comparison.plan_scoring import *
-from planner_comparison.roslogs import *
+from planner_comparison.RosbagInterface import *
 
 # Deep motion planner
 from deep_motion_planner.tensorflow_wrapper import TensorflowWrapper 
@@ -59,7 +59,7 @@ def compute_deep_plan(tensorflow_wrapper, scan_ranges, relative_target):
   """
   Compute the result of the deep motion planner for a specific timestamp
   """
-  cropped_scans = adjust_laser_scans_to_model(scan_ranges, 2, 540)
+  cropped_scans = dmp_util.adjust_laser_scans_to_model(scan_ranges, 2, 540)
   input_data = cropped_scans + list(relative_target)
   
   linear_x, angular_z = tensorflow_wrapper.inference(input_data)
@@ -71,18 +71,18 @@ def compute_deep_plan(tensorflow_wrapper, scan_ranges, relative_target):
 ################## Setup #####################
 pl.close('all')
 args = parse_args()
-plot_velocities_switch = True
+plot_velocities_switch = False
 plot_trajectory_switch = False
-plot_errors_swtich = True
+plot_errors_swtich = False
 run_comparison = True
 logger = logging.Logger('deep_evaluation', level=20) # INFO: 20 | DEBUG: 10
 data_storage = {}
 ##############################################
 
-msg_container = get_messages(args.logPath)
+rosbag_if = RosbagInterface(args.logPath)
+msg_container = rosbag_if.msg_container
 
 if run_comparison:
-  
   # Compute deep plans for timestamps
   time_vec = msg_container['vel_cmd'].times
   vel_cmd_deep = TimeMsgContainer()
