@@ -84,6 +84,13 @@ class RosbagInterface():
         goal_status_msgs.times.append(t)
         goal_status_msgs.msgs.append(msg)
       self.msg_container['goal_status'] = goal_status_msgs
+      
+      # Map msg
+      map_msgs = TimeMsgContainer()
+      for topic, msg, t in self.bag.read_messages(topics=['/map']):
+        map_msgs.times.append(t)
+        map_msgs.msgs.append(msg)
+      self.msg_container['map'] = map_msgs
     else:
       for topic in topics:
         time_msg_container = TimeMsgContainer()
@@ -91,6 +98,7 @@ class RosbagInterface():
           time_msg_container.times.append(t)
           time_msg_container.msgs.append(msg)
         self.msg_container[topic] = time_msg_container
+        
     return self.msg_container
   
   def get_topics(self):

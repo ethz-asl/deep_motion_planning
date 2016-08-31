@@ -25,8 +25,13 @@ class Mission():
     self.goal = PoseStamped
     self.start_time = rospy.Time()
     self.end_time = rospy.Time()
-      
     self.params = {'threshold_range': 0.3}
+    
+  def get_trajectory(self):
+    traj = np.zeros([2, len(self.odom_msgs)])
+    for i, msg in enumerate(self.odom_msgs.msgs):
+      traj[:,i] = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y])
+    return traj
     
   def duration(self):
     return (self.end_time - self.start_time).to_sec()
@@ -79,7 +84,7 @@ class Mission():
         acc_rot[ii] = (v_rot - v_rot_prev) / t_diff
     return acc_trans, acc_rot
   
-  def normalized_rotational_energy(self):
+  def normalized_rotational_energy(self):    
     acc_trans, acc_rot = self.acceleration_vector()
     return np.sum(np.abs(acc_rot))/self.duration()
 
@@ -104,14 +109,15 @@ class Mission():
                     self.obstacle_closeness, 
                     self.final_goal_dist, 
                     self.inverse_avg_speed]
-    feature_weights = [2.0, 2.0, 1.0, 10.0, 1.0]
+    feature_names = ['e_rot', 'e_trans', 'd_obj', 'd_goal', 'speed']
+    feature_weights = [1.0, 1.0, 1.0, 1.0, 1.0]
     
     cost = 0.0
     cost_dict = {}
-    for f, w in zip(feature_list, feature_weights):
+    for n, f, w in zip(feature_names, feature_list, feature_weights):
       feature_cost = f()
       cost += w * feature_cost
-      cost_dict[f.__name__] = w * feature_cost
+      cost_dict[n] = w * feature_cost
     return cost, cost_dict 
     
 

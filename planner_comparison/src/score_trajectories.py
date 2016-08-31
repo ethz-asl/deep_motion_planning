@@ -6,6 +6,7 @@ import argparse
 
 from planner_comparison.plan_scoring import *
 from planner_comparison.RosbagInterface import *
+import planner_comparison.util as pc_util
 
 def parse_args():
     """
@@ -15,13 +16,6 @@ def parse_args():
     parser.add_argument('--paths', nargs='+', help='List of bag files that should be analyzed', type=str, required=True)
     args = parser.parse_args()
     return args
-  
-def compute_detailed_cost_sum(mission_vec):
-  detailed_cost = mission_vec[0].compute_cost()[1]
-  for m in mission_vec[1:]:
-    for k in detailed_cost.keys():
-      detailed_cost[k] += m.compute_cost()[1][k]
-  return detailed_cost
 
 args = parse_args()
 pl.close('all')
@@ -31,7 +25,6 @@ fontsize = 14
  
 data_path = rospkg.RosPack().get_path('planner_comparison') + "/data/"
 filenames = []
-names = ['fully connected','dropout', 'dropout+reg.', '4 Layers']
 
 planner_missions = {}
 
