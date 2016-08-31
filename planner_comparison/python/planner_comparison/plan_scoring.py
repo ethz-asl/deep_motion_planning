@@ -79,13 +79,13 @@ class Mission():
         acc_rot[ii] = (v_rot - v_rot_prev) / t_diff
     return acc_trans, acc_rot
   
-  def rotational_energy(self):
+  def normalized_rotational_energy(self):
     acc_trans, acc_rot = self.acceleration_vector()
-    return np.sum(np.abs(acc_rot))
+    return np.sum(np.abs(acc_rot))/self.duration()
 
-  def translational_energy(self):
+  def normalized_translational_energy(self):
     acc_trans, acc_rot = self.acceleration_vector()
-    return np.sum(np.abs(acc_trans))
+    return np.sum(np.abs(acc_trans))/self.duration()
   
   def normalized_energy(self):
     return self.energy()/self.duration()
@@ -99,8 +99,12 @@ class Mission():
                         self.odom_msgs.msgs[-1].pose.pose.position.y - self.goal.goal.target_pose.pose.position.y)
 
   def compute_cost(self):
-    feature_list = [self.rotational_energy, self.translational_energy, self.obstacle_closeness, self.final_goal_dist, self.inverse_avg_speed]
-    feature_weights = [0.1, 0.1, 1.0, 5.0, 2.0]
+    feature_list = [self.normalized_rotational_energy, 
+                    self.normalized_translational_energy, 
+                    self.obstacle_closeness, 
+                    self.final_goal_dist, 
+                    self.inverse_avg_speed]
+    feature_weights = [2.0, 2.0, 1.0, 10.0, 1.0]
     
     cost = 0.0
     cost_dict = {}
