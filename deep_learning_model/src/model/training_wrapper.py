@@ -189,9 +189,9 @@ class TrainingWrapper():
                         evaluation_split, eval_summary_op], feed_dict=feed_dict)
 
                     duration_eval = time.time() - start_eval
-
-                    logger.info('Evaluattion: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
-
+                    
+                    logger.info('Evaluation: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
+                    
                     eval_summary_writer.add_summary(summary_str, step)
                     eval_summary_writer.flush()
 
