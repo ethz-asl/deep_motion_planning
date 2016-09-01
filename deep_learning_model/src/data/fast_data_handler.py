@@ -96,8 +96,8 @@ class FastDataHandler():
                         if column in ['linear_x','angular_z']:
                             cmd_columns.append(j)
 
-                    # Only use the center 540 elements as input
-                    drop_n_elements = (len(laser_columns) - 540) // 2
+                    # Only use the center 1080 elements as input
+                    drop_n_elements = (len(laser_columns) - 1080) // 2
                     laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
                     
                     data_columns = laser_columns + target_columns

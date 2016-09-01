@@ -68,14 +68,14 @@ class TrainingWrapper():
 
             train_op = model.training(loss, loss_split, learning_rate, global_step)
 
-            eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(543, 2, 'eval_data_input')
+            eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(1083, 2, 'eval_data_input')
             eval_prediction = model.inference(eval_data_placeholder, keep_prob_placeholder,
                     self.eval_batch_size, training=False, reuse=True, output_name='eval_prediction')
             eval_predictions_placeholder = tf.placeholder(tf.float32, shape=[self.eval_n_elements,2])
             evaluation, evaluation_split = model.evaluation(eval_predictions_placeholder, eval_cmd_placeholder)
 
             # This model is saved with the trained weights and can direclty be executed
-            exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(723, 2)
+            exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(1083, 2)
             model_inference = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
                     training=False, reuse=True, output_name='model_inference')
 

@@ -13,7 +13,7 @@ import tensorflow.contrib as contrib
 NAME = 'convolutional'
 
 # The size of the input layer
-INPUT_SIZE = 723
+INPUT_SIZE = 1083
 # The size of the output layer
 CMD_SIZE = 2
 
@@ -38,10 +38,10 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, output_n
     """
 
     # slice 709 elements to get the correct size for the next convolutions
-    laser = tf.slice(data, [0,4], [sample_size,709])
-    goal = tf.slice(data, [0,720], [sample_size,3])
+    laser = tf.slice(data, [0,0], [sample_size,1080])
+    goal = tf.slice(data, [0,1080], [sample_size,3])
 
-    laser = tf.reshape(laser, [sample_size, 1, 709, 1])
+    laser = tf.reshape(laser, [sample_size, 1, 1080, 1])
     hidden_1 = conv2d(laser, 64, [1,7], stride=3, normalizer_fn=batch_norm,
             weights_initializer=xavier_initializer_conv2d(), 
             weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_1')
