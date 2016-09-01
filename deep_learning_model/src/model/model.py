@@ -30,7 +30,7 @@ def __get_variable__(index, input_size, output_size):
                         initializer=tf.contrib.layers.xavier_initializer()),
                         tf.get_variable('biases_hidden{}'.format(index), [output_size]))
 
-def inference(data, keep_prob, reuse=False, output_name='prediction'):
+def inference(data, keep_prob, sample_size, training=True, reuse=False, output_name='prediction'):
     """
     Define the deep neural network used for inference
     """
@@ -59,7 +59,7 @@ def loss(prediction, cmd):
     """
     Define the loss used during the training steps
     """
-    loss_split = tf.reduce_mean((prediction - cmd), 0)
+    loss_split = tf.reduce_mean(tf.abs(prediction - cmd), 0)
     loss = tf.reduce_mean(tf.abs(prediction - cmd))
 
     return loss, loss_split
@@ -77,7 +77,7 @@ def evaluation(prediction, cmd):
     """
     Define how to evaluate the model
     """
-    loss_split = tf.reduce_mean((prediction - cmd), 0)
+    loss_split = tf.reduce_mean(tf.abs(prediction - cmd), 0)
     loss = tf.reduce_mean(tf.abs(prediction - cmd))
 
     return loss, loss_split
