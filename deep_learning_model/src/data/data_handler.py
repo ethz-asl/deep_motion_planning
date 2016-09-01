@@ -55,16 +55,14 @@ class DataHandler():
         ind = next(self.batches)
         df = pd.read_hdf(self.filepath, 'data', where='index=ind')
 
-        # Separate the data into the returned frames
         laser_columns = list()
-        target_columns = list()
+        goal_columns = list()
         cmd_columns = list()
-        for j,column in enumerate(chunk.columns):
-            if column.split('_')[0] == 'laser':
+        for j,column in enumerate(df.columns):
+            if column.split('_')[0] in ['laser']: 
                 laser_columns.append(j)
-            if column.split('_')[0] == 'target'\
-                and not column.split('_')[1] == 'id':
-                target.append(j)
+            if column.split('_')[0] in ['target'] and not column.split('_')[1] == 'id':
+                goal_columns.append(j)
             if column in ['linear_x','angular_z']:
                 cmd_columns.append(j)
 
@@ -72,10 +70,12 @@ class DataHandler():
         drop_n_elements = (len(laser_columns) - 540) // 2
         laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
         
-        data_columns = laser_columns + target_columns
+        laser = df.iloc[:,laser_columns].values
+        goal = df.iloc[:,goal_columns].values
+        angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.chunksize, 1]) / np.pi
+        norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2, axis=1).reshape([self.chunksize, 1]), 2.0) / 2.0 
+        data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1])/np.pi), axis=1)
 
-        return (df.iloc[:, data_columns].copy(deep=True).values,
-                df.iloc[:, cmd_columns].copy(deep=True).values)
-
+        return (data.copy(), df.iloc[:, cmd_columns].copy(deep=True).values)
 
         
