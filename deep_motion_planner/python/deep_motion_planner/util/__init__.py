@@ -2,8 +2,6 @@
 
 import tf
 
-from deep_motion_planner.deep_motion_planner import DeepMotionPlanner as dmp
-
 def compute_relative_target_raw(current_pose, target_pose):
   """
   Computes the relative target pose which has to be fed to the network as an input. 
@@ -32,3 +30,16 @@ def compute_relative_target_raw(current_pose, target_pose):
   yaw = tf.transformations.euler_from_quaternion(orientation_to_target)[2]
 
   return (goal_position_base_frame[0], -goal_position_base_frame[1], yaw)
+
+def adjust_laser_scans_to_model(raw_scan_ranges, scan_stride, n_scans_output):
+  scans = list(raw_scan_ranges[::scan_stride])
+  cut_n_elements = (len(scans) - n_scans_output) // 2
+  cropped_scans = scans
+  if cut_n_elements > 0:
+    rospy.logdebug("Cutting input vector by {0} elements on each side.".format(cut_n_elements))
+    cropped_scans = scans[cut_n_elements:-cut_n_elements]
+  if len(cropped_scans)==n_scans_output+1:
+    rospy.logdebug("Input vector has one scan too much. Cutting off last one.")
+    cropped_scans = cropped_scans[0:-1]
+  
+  return cropped_scans

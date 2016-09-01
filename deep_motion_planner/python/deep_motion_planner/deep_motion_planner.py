@@ -1,18 +1,23 @@
-
 import rospy
-from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Twist, PoseStamped
-
 import actionlib
+import tf
+import threading
+import time
+import os
+import math
+
+# Messages
+from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Twist, PoseStamped, Point, Quaternion
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
 from sensor_msgs.msg import Joy
+from nav_msgs.msg import Path
 
-import tf
-
-import threading, time
-import os
-
+# Tensorflow
 from tensorflow_wrapper import TensorflowWrapper
+
+# Utils
+import util
 
 class DeepMotionPlanner():
     """Use a deep neural network for motion planning"""
@@ -22,6 +27,8 @@ class DeepMotionPlanner():
         self.last_scan = None
         self.freq = 25.0
         self.send_motion_commands = True
+        self.base_position = None
+        self.base_orientation = None
 
         # Load various ROS parameters
         if not rospy.has_param('~model_path'):
@@ -47,6 +54,7 @@ class DeepMotionPlanner():
         goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_topic_callback)
         joystick_sub = rospy.Subscriber('/joy', Joy, self.joystick_callback)
         self.cmd_pub  = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        self.deep_plan_pub = rospy.Publisher('/deep_planner/path', Path, queue_size=1)
 
         # We over the same action api as the move base package
         self._as = actionlib.SimpleActionServer('deep_move_base', MoveBaseAction, auto_start = False)
@@ -79,6 +87,7 @@ class DeepMotionPlanner():
         Callback function for the laser scan messages
         """
         self.last_scan = data
+      
 
     def processing_data(self):
         """
@@ -111,18 +120,8 @@ class DeepMotionPlanner():
                 target = self.compute_relative_target()
                 if not target:
                     continue
-                        
-                # Prepare the input vector, perform the inference on the model 
-                # and publish a new command
-                scans = list(self.last_scan.ranges[::self.laser_scan_stride])
-                cut_n_elements = (len(scans) - self.n_laser_scans) // 2
-                cropped_scans = scans
-                if cut_n_elements > 0:
-                  rospy.logdebug("Cutting input vector by {0} elements on each side.".format(cut_n_elements))
-                  cropped_scans = scans[cut_n_elements:-cut_n_elements]
-                if len(cropped_scans)==self.n_laser_scans+1:
-                  rospy.logdebug("Input vector has one scan too much. Cutting off last one.")
-                  cropped_scans = cropped_scans[0:-1]
+
+                cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans)
                 
                 input_data = cropped_scans + list(target)
 
@@ -133,6 +132,7 @@ class DeepMotionPlanner():
                 cmd.angular.z = angular_z
                 if self.send_motion_commands:
                   self.cmd_pub.publish(cmd)
+                  self.publish_predicted_path(cmd)
 
                 # Check if the goal pose is reached
                 self.check_goal_reached(target)
@@ -171,6 +171,8 @@ class DeepMotionPlanner():
         feedback.base_position.pose.orientation.y = base_orientation[1]
         feedback.base_position.pose.orientation.z = base_orientation[2]
         feedback.base_position.pose.orientation.w = base_orientation[3]
+        self.base_position = base_position
+        self.base_orientation = base_orientation
         self._as.publish_feedback(feedback)
 
         # Compute the relative goal position
@@ -246,4 +248,42 @@ class DeepMotionPlanner():
           rospy.loginfo("Planning aborted!")
           self._as.set_succeeded()
           
-
+    def publish_predicted_path(self, cmd_vel, sim_time=rospy.Duration(1.7), dt=rospy.Duration(0.05)):
+      """
+      Compute plan from velocity command (assuming constant translational and rotational velocity) 
+      for the succeeding time interval specified with sim_time
+      """
+      path = Path()
+      start_time = rospy.get_rostime()
+      final_time = start_time + sim_time
+      path.header.stamp = start_time
+      path.header.frame_id = 'odom'
+      p = PoseStamped()
+      p.pose.position.x = self.base_position[0]
+      p.pose.position.y = self.base_position[1]
+      p.pose.orientation.x = self.base_orientation[0]
+      p.pose.orientation.y = self.base_orientation[1]
+      p.pose.orientation.z = self.base_orientation[2]
+      p.pose.orientation.w = self.base_orientation[3]
+      path.poses.append(p)
+      
+      t = start_time
+      trans_vel = cmd_vel.linear.x
+      rot_vel = cmd_vel.angular.z
+      while t < start_time + sim_time:
+        t += dt
+        new_pose = PoseStamped()
+        new_pose.header.stamp = t
+        quat = path.poses[-1].pose.orientation
+        euler = tf.transformations.euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])
+        current_yaw = euler[2]
+        new_yaw = current_yaw + dt.to_sec()*rot_vel
+        yaw_mean = (current_yaw + new_yaw) / 2.0
+        old_pos = path.poses[-1].pose.position
+        new_pose.pose.position = Point(old_pos.x + trans_vel*math.cos(yaw_mean)*dt.to_sec(), 
+                                       old_pos.y + trans_vel*math.sin(yaw_mean)*dt.to_sec(), 
+                                       old_pos.z + 0.0)
+        new_pose.pose.orientation = Quaternion(*tf.transformations.quaternion_from_euler(0.0, 0.0, new_yaw))
+        path.poses.append(new_pose)
+        
+      self.deep_plan_pub.publish(path)
