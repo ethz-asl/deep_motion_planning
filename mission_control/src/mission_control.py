@@ -283,7 +283,7 @@ class MissionControl():
         """
         Check if the given target is located in an obstacle or its inflation radius
         """
-        threshold = 50
+        threshold = 10
 
         if self.costmap:
             # Compute the coordinates in the costmap
