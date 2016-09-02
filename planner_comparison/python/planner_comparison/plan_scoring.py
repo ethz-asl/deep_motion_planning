@@ -28,10 +28,15 @@ class Mission():
     self.params = {'threshold_range': 0.3}
     
   def get_trajectory(self):
-    traj = np.zeros([2, len(self.odom_msgs)])
-    for i, msg in enumerate(self.odom_msgs.msgs):
-      traj[:,i] = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y])
-    return traj
+    traj = np.zeros([2, len(self.loc_msgs)])
+    try:
+      for i, msg in enumerate(self.loc_msgs.msgs):
+        traj[:,i] = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y])
+      return traj
+    except AttributeError:
+      for i, msg in enumerate(self.loc_msgs.msgs):
+        traj[:,i] = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y])
+      return traj
     
   def duration(self):
     return (self.end_time - self.start_time).to_sec()
