@@ -7,6 +7,7 @@ from std_msgs.msg import Empty
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid
 from map_msgs.msg import OccupancyGridUpdate
+from sensor_msgs.msg import Joy
 import std_srvs.srv
 
 import tf
@@ -27,6 +28,7 @@ class MissionControl():
         # Load a mission and parse the file
         mission_file = rospy.get_param('~mission_file')
         deep_motion_planner = rospy.get_param('~deep_motion_planner', default=False)
+        stage_simulation = rospy.get_param('~stage_simulation', default=True)
         if not os.path.exists(mission_file):
             rospy.logerr('Mission file not found: {}'.format(mission_file))
             exit()
@@ -52,6 +54,7 @@ class MissionControl():
                 self.__costmap_callback__)
         self.costmap_update_sub = rospy.Subscriber('/move_base/global_costmap/costmap_updates', \
                 OccupancyGridUpdate, self.__costmap_update_callback__)
+        self.joystick_sub = rospy.Subscriber('/joy', Joy, self.joystick_callback)
 
         if deep_motion_planner:
             self.navigation_client = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
@@ -62,8 +65,9 @@ class MissionControl():
         while not self.navigation_client.wait_for_server(rospy.Duration(5)):
             rospy.loginfo('Waiting for move_base action server')
 
-        rospy.wait_for_service('/reset_positions')
-
+        if stage_simulation:
+          rospy.wait_for_service('/reset_positions')
+        
         # Start the mission if it is not empty
         if len(self.mission) > 0:
             rospy.loginfo('Start mission')
@@ -76,6 +80,7 @@ class MissionControl():
         """
         Send the next command in the mission list
         """
+        rospy.loginfo('sending next command')
 
         if len(self.mission) <= self.mission_index:
             rospy.loginfo('Mission Finished')
@@ -295,7 +300,12 @@ class MissionControl():
         try:
             reset_simulation = rospy.ServiceProxy('/reset_positions', std_srvs.srv.Empty)
             reset_simulation()
-	except rospy.ServiceException, e:
-	    print('Service call failed: {}'.format(e))
+        except rospy.ServiceException, e:
+            print('Service call failed: {}'.format(e))
+            
+    def joystick_callback(self, data):
+        # Abort planning 
+        if data.buttons[4] == 1 and data.buttons[5] == 1:
+            rospy.signal_shutdown('Mission Finished')
 
 
