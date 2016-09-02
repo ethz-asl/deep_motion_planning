@@ -28,6 +28,12 @@ class RosbagInterface():
         vel_cmd_msgs.times.append(t)
         vel_cmd_msgs.msgs.append(msg)
       self.msg_container['vel_cmd'] = vel_cmd_msgs
+      if len(vel_cmd_msgs) == 0:
+        vel_cmd_msgs = TimeMsgContainer()
+        for topic, msg, t in self.bag.read_messages(topics=['/cmd_vel_mux/input/navi']):
+          vel_cmd_msgs.times.append(t)
+          vel_cmd_msgs.msgs.append(msg)
+        self.msg_container['vel_cmd'] = vel_cmd_msgs
       
       # Get scans 
       scan_msgs = TimeMsgContainer()
@@ -52,10 +58,16 @@ class RosbagInterface():
         
       # Get position/localization messages
       loc_msgs = TimeMsgContainer()
-      for topic, msg, t in self.bag.read_messages(topics=['/move_base/feedback']):
+      for topic, msg, t in self.bag.read_messages(topics=['/amcl_pose']):
         loc_msgs.times.append(t)
         loc_msgs.msgs.append(msg)
       self.msg_container['loc'] = loc_msgs
+      if len(loc_msgs) == 0:
+        loc_msgs = TimeMsgContainer()
+        for topic, msg, t in self.bag.read_messages(topics=['/move_base/feedback']):
+          loc_msgs.times.append(t)
+          loc_msgs.msgs.append(msg)
+        self.msg_container['loc'] = loc_msgs
       
       # Odometry data
       odom_msgs = TimeMsgContainer()
@@ -63,6 +75,12 @@ class RosbagInterface():
         odom_msgs.times.append(t)
         odom_msgs.msgs.append(msg)
       self.msg_container['odom'] = odom_msgs
+      if len(odom_msgs) == 0:
+        odom_msgs = TimeMsgContainer()
+        for topic, msg, t in self.bag.read_messages(topics=['/odom']):
+          odom_msgs.times.append(t)
+          odom_msgs.msgs.append(msg)
+        self.msg_container['odom'] = odom_msgs
       
       # Mission start
       start_msgs = TimeMsgContainer()
