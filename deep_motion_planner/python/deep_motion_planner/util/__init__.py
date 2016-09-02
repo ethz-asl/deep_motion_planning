@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import tf
+import rospy
 
 def compute_relative_target_raw(current_pose, target_pose):
   """
