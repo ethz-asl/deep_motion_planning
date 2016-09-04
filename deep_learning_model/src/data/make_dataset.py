@@ -12,6 +12,8 @@ def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='Fuse csv files and prepare data')
     parser.add_argument('input_path', help='Folder of the raw data')
+    parser.add_argument('--sort', help='Sort the list of .csv files by number of samples',
+            action='store_true')
 
     def check_extension(extensions, filename):
         ext = os.path.splitext(filename)[1]
@@ -26,6 +28,21 @@ def parse_args():
 
     return args
 
+def sorted_by_elements(files):
+    num_elements = [-1] * len(files)
+    for i,f in enumerate(files):
+        print('({}/{}) {}'.format(i, len(files), f), end='\r')
+        current = pd.read_csv(f)
+        num_elements[i] = current.shape[0]
+
+    data = [x for x in zip(files,num_elements)]
+    data.sort(key=lambda x: x[1])
+
+    return [filename for filename,_ in data]
+
+def get_target_id(x):
+    return int(os.path.basename(x).split('_')[-1].split('.')[0])
+
 def main(project_dir):
     logger = logging.getLogger(__name__)
     logger.info('making final data set from raw data')
@@ -37,8 +54,16 @@ def main(project_dir):
     all_files = [os.path.join(path,f) for f in os.listdir(path) 
                          if os.path.isfile(os.path.join(path, f)) and f.split('.')[-1] == 'csv']
 
-    # Sort them by the integer number
-    all_files.sort(key=lambda x: int(os.path.basename(x).split('_')[-1].split('.')[0]))
+    # Sort by number of elements if requested
+    if args.sort:
+        logger.info('Sort list of files by number of elements')
+        all_files = sorted_by_elements(all_files)
+    else:
+        logger.info('Sort list of files by target id')
+        # Sort them by the integer number
+        all_files.sort(key=lambda x: get_target_id(x))
+
+    logger.info('Done: List of files is sorted')
 
     target_file = os.path.join(project_dir, 'data', 'processed', args.output_file)
 
@@ -57,7 +82,7 @@ def main(project_dir):
 
             # Make sure the final dataframe has a continous index
             current['original_index'] = current.index
-            current['target_id'] = i+1
+            current['target_id'] = get_target_id(f)
             current.index = pd.Series(current.index) + num_elements
             store.append('data', current)
 
