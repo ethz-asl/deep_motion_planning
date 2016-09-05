@@ -37,7 +37,7 @@ class DeepMotionPlanner():
             rospy.logerr('Missing parameter: ~model_path')
             exit()
 
-        self.laser_scan_stride = rospy.get_param('~laser_scan_stride', 2) # Take every ith element
+        self.laser_scan_stride = rospy.get_param('~laser_scan_stride', 1) # Take every ith element
         self.n_laser_scans = rospy.get_param('~n_laser_scans', 1080) # Cut n elements from the center to adjust the length
         self.model_path = rospy.get_param('~model_path')
         self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')

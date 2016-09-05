@@ -96,9 +96,18 @@ class FastDataHandler():
                         if column in ['linear_x','angular_z']:
                             cmd_columns.append(j)
 
-                    # Only use the center 1080 elements as input
-                    drop_n_elements = (len(laser_columns) - 1080) // 2
-                    laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+                    #Only use the center n_scans elements as input
+                    n_scans = 1080
+                    drop_n_elements = (len(laser_columns) - n_scans) // 2
+
+                    if drop_n_elements < 0:
+                            raise ValueError('Number of scans is to small: {} < {}'
+                                    .format(len(laser_columns), n_scans))
+                    elif drop_n_elements > 0:
+                            laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+
+                    if len(laser_columns) == n_scans+1:
+                            laser_columns = laser_columns[0:-1]
                     
                     data_columns = laser_columns + goal_columns
 
@@ -110,7 +119,7 @@ class FastDataHandler():
                     goal =  chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,goal_columns].values
                     angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.batchsize, 1]) / np.pi
                     norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2,
-                        axis=1).reshape([self.batchsize, 1]), 2.0) / 2.0
+                        axis=1).reshape([self.batchsize, 1]), 10.0) / 10.0
                     data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,
                         1])/np.pi), axis=1)
 
