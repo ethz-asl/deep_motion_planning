@@ -100,7 +100,7 @@ class FastDataHandler():
                     drop_n_elements = (len(laser_columns) - 1080) // 2
                     laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
                     
-                    data_columns = laser_columns + target_columns
+                    data_columns = laser_columns + goal_columns
 
 
                 # Return the batches from the current data chunk that is in memory
