@@ -11,6 +11,11 @@ from datetime import *
 class WriteMission():
   
   def __init__(self):
+    """
+    Drive with joystick and select targets for autonomous mission.
+    Requires robot to be localized.
+    """
+    print("Press green (A) button to add a target to the list or red (B) button to delete the last recorded target from the list.")
     storage_path = rospy.get_param('~storage_path', default=rospkg.RosPack().get_path('mission_control') + "/missions/")
     date_str = datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')
     self.storage_file = os.path.join(storage_path, date_str) + '.txt'
