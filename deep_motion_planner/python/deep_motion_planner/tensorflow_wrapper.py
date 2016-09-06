@@ -3,6 +3,7 @@ from tensorflow.python.platform import gfile
 import tensorflow as tf
 import os
 import sys
+import numpy as np
     
 class TensorflowWrapper():
     """
@@ -58,9 +59,9 @@ class TensorflowWrapper():
         """
         Take the given data and perform the model inference on it
         """
-        feed_dict = {'data_input:0': [data], 'keep_prob_placeholder:0': 1.0}
+        feed_dict = {'data_input:0': [data]}
 
-        prediction = self.sess.run(['eval_prediction:0'], feed_dict=feed_dict)[0]
+        prediction = self.sess.run(['model_inference:0'], feed_dict=feed_dict)[0]
 
         return (prediction[0,0], prediction[0,1])
 

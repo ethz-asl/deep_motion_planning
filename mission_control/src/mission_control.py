@@ -44,6 +44,8 @@ class MissionControl():
 
         self.costmap = None # Cache for the costmap
 
+        self.tf_broadcaster = tf.TransformBroadcaster()
+
         # ROS topics
         self.start_pub = rospy.Publisher('/start', Empty, queue_size=1)
         self.stop_pub = rospy.Publisher('/stop', Empty, queue_size=1)
@@ -198,6 +200,12 @@ class MissionControl():
         target.pose.position.y = -goal_position_base_frame[1]
 
         self.target_pub.publish(target)
+
+        self.tf_broadcaster.sendTransform((self.current_target[0], self.current_target[1], 0),
+                        q,
+                        rospy.Time.now(),
+                        'goal',
+                        'map')
 
     def __done_callback__(self, state, result):
         """

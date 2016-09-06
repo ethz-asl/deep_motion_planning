@@ -13,6 +13,8 @@ from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
 from sensor_msgs.msg import Joy
 from nav_msgs.msg import Path
 
+import numpy as np
+
 # Tensorflow
 from tensorflow_wrapper import TensorflowWrapper
 
@@ -35,8 +37,8 @@ class DeepMotionPlanner():
             rospy.logerr('Missing parameter: ~model_path')
             exit()
 
-        self.laser_scan_stride = rospy.get_param('~laser_scan_stride', 2) # Take every ith element
-        self.n_laser_scans = rospy.get_param('~n_laser_scans', 540) # Cut n elements from the center to adjust the length
+        self.laser_scan_stride = rospy.get_param('~laser_scan_stride', 1) # Take every ith element
+        self.n_laser_scans = rospy.get_param('~n_laser_scans', 1080) # Cut n elements from the center to adjust the length
         self.model_path = rospy.get_param('~model_path')
         self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
         self.use_checkpoints = rospy.get_param('~use_checkpoints', False)
@@ -123,7 +125,13 @@ class DeepMotionPlanner():
 
                 cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans)
                 
-                input_data = cropped_scans + list(target)
+                # Prepare the input vector, perform the inference on the model 
+                # and publish a new command
+                goal = np.array(target)
+                angle = np.arctan2(goal[1],goal[0]) / np.pi
+                norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 2.0) / 2.0
+                data = np.stack((angle, norm, goal[2] / np.pi))
+                input_data = list(cropped_scans) + data.tolist()
 
                 linear_x, angular_z = tf_wrapper.inference(input_data)
 

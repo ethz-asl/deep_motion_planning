@@ -4,9 +4,10 @@ import numpy as np
 
 class DataHandler():
     """Class to load data from HDF5 storages in a random and chunckwise manner"""
-    def __init__(self, filepath, chunksize=1000):
+    def __init__(self, filepath, chunksize=1000, shuffle = True):
         self.filepath = filepath
         self.chunksize = chunksize
+        self.shuffle = shuffle
 
         if not os.path.exists(filepath):
             raise IOError('File does not exists: {}'.format(filepath))
@@ -30,7 +31,10 @@ class DataHandler():
         @rtype Generator
         """
         current_index = 0
-        permutation = np.random.permutation(self.nrows)
+        if self.shuffle:
+            permutation = np.random.permutation(self.nrows)
+        else:
+            permutation = np.arange(self.nrows)
         while True:
             yield permutation[current_index:current_index+self.chunksize]
             current_index += self.chunksize
@@ -51,28 +55,37 @@ class DataHandler():
         ind = next(self.batches)
         df = pd.read_hdf(self.filepath, 'data', where='index=ind')
 
-        # Separate the data into the returned frames
         laser_columns = list()
-        target_columns = list()
+        goal_columns = list()
         cmd_columns = list()
-        for j,column in enumerate(chunk.columns):
-            if column.split('_')[0] == 'laser':
+        for j,column in enumerate(df.columns):
+            if column.split('_')[0] in ['laser']: 
                 laser_columns.append(j)
-            if column.split('_')[0] == 'target'\
-                and not column.split('_')[1] == 'id':
-                target.append(j)
+            if column.split('_')[0] in ['target'] and not column.split('_')[1] == 'id':
+                goal_columns.append(j)
             if column in ['linear_x','angular_z']:
                 cmd_columns.append(j)
 
-        # Only use the center 540 elements as input
-        drop_n_elements = (len(laser_columns) - 540) // 2
-        laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+        #Only use the center n_scans elements as input
+        n_scans = 1080
+        drop_n_elements = (len(laser_columns) - n_scans) // 2
+
+	if drop_n_elements < 0:
+		raise ValueError('Number of scans is to small: {} < {}'
+			.format(len(laser_columns), n_scans))
+	elif drop_n_elements > 0:
+		laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+
+	if len(laser_columns) == n_scans+1:
+		laser_columns = laser_columns[0:-1]
         
-        data_columns = laser_columns + target_columns
+        laser = df.iloc[:,laser_columns].values
+        goal = df.iloc[:,goal_columns].values
+        angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.chunksize, 1]) / np.pi
+        norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2, axis=1).reshape([self.chunksize, 1]),
+                10.0) / 10.0 
+        data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1])/np.pi), axis=1)
 
-        return (df.iloc[:, data_columns].copy(deep=True).values,
-                df.iloc[:, cmd_columns].copy(deep=True).values)
-            
-
+        return (data.copy(), df.iloc[:, cmd_columns].copy(deep=True).values)
 
         

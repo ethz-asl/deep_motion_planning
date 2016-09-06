@@ -58,7 +58,8 @@ class FastDataHandler():
         """
         Generator for the single batches
         """
-        data_columns = None
+        laser_columns = None
+        goal_columns = None
         cmd_columns = None
 
         while True:
@@ -83,31 +84,48 @@ class FastDataHandler():
                 chunk = chunk.reindex(np.random.permutation(chunk.index))
 
                 # On the first call, get the column indecies for the input data and the commands
-                if not data_columns:
+                if not laser_columns:
                     laser_columns = list()
-                    target_columns = list()
+                    goal_columns = list()
                     cmd_columns = list()
                     for j,column in enumerate(chunk.columns):
-                        if column.split('_')[0] == 'laser':
+                        if column.split('_')[0] in ['laser']: 
                             laser_columns.append(j)
-                        if column.split('_')[0] == 'target'\
-                            and not column.split('_')[1] == 'id':
-                            target_columns.append(j)
+                        if column.split('_')[0] in ['target'] and not column.split('_')[1] == 'id':
+                            goal_columns.append(j)
                         if column in ['linear_x','angular_z']:
                             cmd_columns.append(j)
 
-                    # Only use the center 540 elements as input
-                    drop_n_elements = (len(laser_columns) - 540) // 2
-                    laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+                    #Only use the center n_scans elements as input
+                    n_scans = 1080
+                    drop_n_elements = (len(laser_columns) - n_scans) // 2
+
+                    if drop_n_elements < 0:
+                            raise ValueError('Number of scans is to small: {} < {}'
+                                    .format(len(laser_columns), n_scans))
+                    elif drop_n_elements > 0:
+                            laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+
+                    if len(laser_columns) == n_scans+1:
+                            laser_columns = laser_columns[0:-1]
                     
-                    data_columns = laser_columns + target_columns
+                    data_columns = laser_columns + goal_columns
 
 
                 # Return the batches from the current data chunk that is in memory
                 for j in range(chunk.shape[0] // self.batchsize):
-                    yield (chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,
-                        data_columns].copy(deep=True).values,
-                    chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].copy(deep=True).values)
+                    
+                    laser = chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,laser_columns].values
+                    goal =  chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,goal_columns].values
+                    angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.batchsize, 1]) / np.pi
+                    norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2,
+                        axis=1).reshape([self.batchsize, 1]), 10.0) / 10.0
+                    data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,
+                        1])/np.pi), axis=1)
+
+                    yield (data.copy(), 
+                        chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values
+)
                     current_index += self.batchsize
 
                 if self.use_chunks:
