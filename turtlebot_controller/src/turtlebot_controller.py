@@ -38,13 +38,13 @@ class TurtlebotController():
       cmd_vel_controller = Twist()
       cmd_vel_controller.linear.x = self.ffwd_weight*cmd_vel.linear.x + self.trans_weight*self.integral_trans_vel
       cmd_vel_controller.angular.z = self.ffwd_weight*cmd_vel.angular.z + self.rot_weight*self.integral_rot_vel
-      rospy.loginfo("cmd_vel = ({0}, {1}) \t meas_vel = ({2}, {3})".format(cmd_vel.linear.x, cmd_vel.angular.z, self.measured_velocity.linear.x, self.measured_velocity.angular.z))
-      rospy.loginfo("integral part = ({0}, {1})".format(self.integral_trans_vel, self.integral_rot_vel))
-      rospy.loginfo("resulting command = ({0}, {1})".format(cmd_vel_controller.linear.x, cmd_vel_controller.angular.z))
+      rospy.logdebug("cmd_vel = ({0}, {1}) \t meas_vel = ({2}, {3})".format(cmd_vel.linear.x, cmd_vel.angular.z, self.measured_velocity.linear.x, self.measured_velocity.angular.z))
+      rospy.logdebug("integral part = ({0}, {1})".format(self.integral_trans_vel, self.integral_rot_vel))
+      rospy.logdebug("resulting command = ({0}, {1})".format(cmd_vel_controller.linear.x, cmd_vel_controller.angular.z))
       self.controller_vel_pub.publish(cmd_vel_controller)
     else:
       # Reset integrators
-      rospy.loginfo("Resetting integrators.")
+      rospy.logdebug("Resetting integrators.")
       self.integral_trans_vel = 0.0
       self.integral_rot_vel = 0.0
       self.controller_vel_pub.publish(cmd_vel)
