@@ -1,0 +1,13 @@
+<package format="2">
+  <name>turtlebot_controller</name>
+  <version>0.0.0</version>
+  <description>Intermediate controller for turtlebot</description>
+  <maintainer email="mark.pfeiffer@mavt.ethz.ch">mark</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>catkin_simple</buildtool_depend>
+  <depend>rospy</depend>
+  
+</package>
