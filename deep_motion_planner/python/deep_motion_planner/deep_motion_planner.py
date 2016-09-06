@@ -129,8 +129,9 @@ class DeepMotionPlanner():
                 # and publish a new command
                 goal = np.array(target)
                 angle = np.arctan2(goal[1],goal[0]) / np.pi
-                norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 2.0) / 2.0
+                norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 10.0) / 10.0
                 data = np.stack((angle, norm, goal[2] / np.pi))
+
                 input_data = list(cropped_scans) + data.tolist()
 
                 linear_x, angular_z = tf_wrapper.inference(input_data)
