@@ -5,13 +5,15 @@ from __future__ import print_function
 import os
 import logging
 import argparse
+import random
 
 import pandas as pd
 
 def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='Fuse csv files and prepare data')
-    parser.add_argument('input_path', help='Folder of the raw data')
+    parser.add_argument('mixer_file', help='Path to the mixer definition')
+    parser.add_argument('--random', help='Select the files randomly', action='store_true')
 
     def check_extension(extensions, filename):
         ext = os.path.splitext(filename)[1]
@@ -22,9 +24,82 @@ def parse_args():
     parser.add_argument('output_file', help='Filename of the processed data (stored in \
             ./data/processed)', type=lambda
             s:check_extension([".h5"],s))
+
     args = parser.parse_args()
 
     return args
+
+def parse_mixer_file(filepath):
+    """
+    Take a mixer file and extract the paths and number of files taken from those paths
+    """
+    logger = logging.getLogger(parse_mixer_file.__name__)
+    mixer = list()
+    with open(filepath, 'r') as mixer_file:
+        for i,line in enumerate(mixer_file):
+
+            line = line.strip()
+
+            # A line looks like the following
+            # <folder path> <number of trajectories>
+            # If the second argument is not present, use all files in the folder indicated by -1
+
+            # skip empty lines and lines starting with # are comments
+            if len(line) == 0 or line[0] == '#':
+                continue
+
+            splits= line.split(' ')
+
+            if len(splits) == 2:
+                path = splits[0].strip()
+                num_trajectories = int(splits[1])
+            elif len(splits) == 1:
+                path = splits[0].strip()
+                num_trajectories = -1
+            else:
+                raise ValueError('Invalid number of values in line {}: {}'.format(i+1,
+                    line.strip()))
+
+            if num_trajectories < 0:
+                logger.info('Take all files from {}'.format(path))
+            else:
+                logger.info('Take {} files from {}'.format(num_trajectories, path))
+
+            mixer.append((path, num_trajectories))
+
+        if len(mixer) == 0:
+            raise ValueError('Mixer file did not contain any valid element')
+
+    return mixer
+
+def get_file_list(mixer_file, select_random):
+    """
+    Take a mixer file and return a list of .csv files
+    """
+    logger = logging.getLogger(get_file_list.__name__)
+    mixer = parse_mixer_file(mixer_file)
+    files = list()
+
+    for m in mixer:
+        path = os.path.join(project_dir, m[0])
+        current_files = [os.path.join(path,f) for f in os.listdir(path) 
+                         if os.path.isfile(os.path.join(path, f)) and f.split('.')[-1] == 'csv']
+
+        if select_random:
+            random.shuffle(current_files)
+        else:
+            current_files.sort(key=lambda x: int(os.path.basename(x).split('_')[-1].split('.')[0]))
+
+        if m[1] < 0:
+            # -1 means all .csv files
+            files += current_files
+        elif m[1] > 0:
+            if m[1] > len(current_files):
+                logger.warn('Not enough files ({} < {}) in path: {}'.format(len(current_files),
+                    m[1], m[0]))
+            files += current_files[:m[1]]
+
+    return files
 
 def main(project_dir):
     logger = logging.getLogger(__name__)
@@ -32,27 +107,36 @@ def main(project_dir):
 
     args = parse_args()
 
-    # Generate a list with all the csv files in the input folder
-    path = os.path.join(project_dir, args.input_path)
-    all_files = [os.path.join(path,f) for f in os.listdir(path) 
-                         if os.path.isfile(os.path.join(path, f)) and f.split('.')[-1] == 'csv']
-
-    # Sort them by the integer number
-    all_files.sort(key=lambda x: int(os.path.basename(x).split('_')[-1].split('.')[0]))
-
     target_file = os.path.join(project_dir, 'data', 'processed', args.output_file)
 
     # Do not overwrite existing data containers
     if os.path.exists(target_file):
-        logger.error('Target file already exists: {}'.format(target_file))
-        exit()
+        logger.warn('Target file already exists: {}'.format(target_file))
+        overwrite = input('Overwrite (yN)? ')
+        if overwrite.lower() == 'y':
+            logger.info('Overwrite file')
+        else:
+            logger.info('Abort! File was not generated')
+            exit()
+
+    # Generate a list with all the csv files in the input folders
+    logger.info('Parse mixer file: {}'.format(args.mixer_file))
+    all_files = get_file_list(os.path.join(project_dir, args.mixer_file), args.random)
+
+    # Make shure, files in a sequence are not from the same source
+    random.shuffle(all_files)
 
     with pd.HDFStore(target_file) as store:
         num_elements = 0
 
+        longest_filename = max([len(x) for x in all_files])
         # Iterate over all input files and add them to the HDF5 container
         for i,f in enumerate(all_files):
-            print('({}/{}) {}'.format(i, len(all_files), f), end='\r')
+
+            # Avoid trailing characters if the previous string was longer
+            filler = ' ' * (longest_filename - len(f))
+
+            print('{}/{}) {}'.format(i, len(all_files), f) + filler, end='\r')
             current = pd.read_csv(f)
 
             # Make sure the final dataframe has a continous index
