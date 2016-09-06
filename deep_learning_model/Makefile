@@ -18,7 +18,7 @@ requirements:
 	pip install -q -r requirements.txt
 
 data:
-	python src/data/make_dataset.py data/raw/$(RAW_DATASET)/ $(DATASET).h5
+	python src/data/make_dataset.py --random data/mixers/data.mix $(DATASET).h5
 
 train:
 	python src/model/train_model.py data/processed/$(DATASET).h5 \
