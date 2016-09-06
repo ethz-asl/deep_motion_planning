@@ -29,14 +29,19 @@ class Mission():
     
   def get_trajectory(self):
     traj = np.zeros([2, len(self.loc_msgs)])
-    try:
-      for i, msg in enumerate(self.loc_msgs.msgs):
-        traj[:,i] = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y])
-      return traj
-    except AttributeError:
-      for i, msg in enumerate(self.loc_msgs.msgs):
-        traj[:,i] = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y])
-      return traj
+    for i, msg in enumerate(self.loc_msgs.msgs):
+      traj[:,i] = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y])
+    return traj
+    
+  def get_trajectory_for_time_interval(self, interval):
+    print('')
+    x_vec = []
+    y_vec = []
+    for idx, msg in enumerate(self.loc_msgs.msgs):
+      if self.loc_msgs.times[idx] > interval[0] and self.loc_msgs.times[idx] < interval[1]:
+        x_vec.append(msg.pose.pose.position.x)
+        y_vec.append(msg.pose.pose.position.y)
+    return np.array([x_vec, y_vec])
     
   def duration(self):
     return (self.end_time - self.start_time).to_sec()
@@ -164,6 +169,8 @@ def extract_missions(msg_container):
     data.end_time = stop_msgs.times[ii]
     if len(msg_container['loc']) > 0:
       data.loc_msgs = msg_container['loc'].get_data_for_interval(data.start_time, data.end_time) 
+    if len(msg_container['joy']) > 0:
+      data.joy_msgs = msg_container['joy'].get_data_for_interval(data.start_time, data.end_time)
     data.odom_msgs = msg_container['odom'].get_data_for_interval(data.start_time, data.end_time)
     data.vel_cmd_msgs = msg_container['vel_cmd'].get_data_for_interval(data.start_time, data.end_time)
     data.scan_msgs = msg_container['scan'].get_data_for_interval(data.start_time, data.end_time)
