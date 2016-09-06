@@ -1,0 +1,4 @@
+<launch>
+  <node name="turtlebot_controller" pkg="turtlebot_controller" type="turtlebot_controller_node.py" output="screen">
+  </node>
+</launch>

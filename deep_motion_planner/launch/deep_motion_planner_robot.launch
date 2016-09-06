@@ -2,6 +2,7 @@
 
   <include file="$(find turtlebot_navigation)/launch/includes/velocity_smoother.launch.xml"/>
   <include file="$(find turtlebot_navigation)/launch/includes/safety_controller.launch.xml"/>
+  <include file="$(find turtlebot_controller)/launch/turtlebot_controller.launch"/>
 
   <node name="deep_motion_planner" pkg="deep_motion_planner" type="deep_motion_planner_node.py"
   output="screen">
@@ -9,6 +10,6 @@
     <param name="model_path" type="string" value="$(find deep_motion_planner)/models/" />
     <param name="use_checkpoints" type="bool" value="False" />
     <param name="protobuf_file" type="string" value="model.pb" />
-    <remap from="/cmd_vel" to="/navigation_velocity_smoother/raw_cmd_vel" />
+    <remap from="/cmd_vel" to="/deep_planner/cmd_vel" />
   </node>
 </launch>
