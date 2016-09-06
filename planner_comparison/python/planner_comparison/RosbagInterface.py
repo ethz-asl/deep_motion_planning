@@ -96,6 +96,13 @@ class RosbagInterface():
         stop_msgs.msgs.append(msg)
       self.msg_container['stop'] = stop_msgs
       
+      # Joystick
+      joy_msgs = TimeMsgContainer()
+      for topic, msg, t in self.bag.read_messages(topics=['/joy']):
+        joy_msgs.times.append(t)
+        joy_msgs.msgs.append(msg)
+      self.msg_container['joy'] = joy_msgs
+      
       # Goal status messages
       goal_status_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/move_base/status']):
