@@ -81,10 +81,9 @@ class DataHandler():
         
         laser = df.iloc[:,laser_columns].values
         goal = df.iloc[:,goal_columns].values
-        angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.chunksize, 1]) / np.pi
-        norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2, axis=1).reshape([self.chunksize, 1]),
-                10.0) / 10.0 
-        data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1])/np.pi), axis=1)
+        angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.chunksize, 1])
+        norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2, axis=1).reshape([self.chunksize, 1]), 10.0)
+        data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1])), axis=1)
 
         return (data.copy(), df.iloc[:, cmd_columns].copy(deep=True).values)
 

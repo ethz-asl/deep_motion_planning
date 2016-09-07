@@ -128,9 +128,9 @@ class DeepMotionPlanner():
                 # Prepare the input vector, perform the inference on the model 
                 # and publish a new command
                 goal = np.array(target)
-                angle = np.arctan2(goal[1],goal[0]) / np.pi
-                norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 10.0) / 10.0
-                data = np.stack((angle, norm, goal[2] / np.pi))
+                angle = np.arctan2(goal[1],goal[0])
+                norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 10.0)
+                data = np.stack((angle, norm, goal[2]))
 
                 input_data = list(cropped_scans) + data.tolist()
 

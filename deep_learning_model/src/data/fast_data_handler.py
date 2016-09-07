@@ -117,11 +117,10 @@ class FastDataHandler():
                     
                     laser = chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,laser_columns].values
                     goal =  chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,goal_columns].values
-                    angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.batchsize, 1]) / np.pi
+                    angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.batchsize, 1])
                     norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2,
-                        axis=1).reshape([self.batchsize, 1]), 10.0) / 10.0
-                    data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,
-                        1])/np.pi), axis=1)
+                        axis=1).reshape([self.batchsize, 1]), 10.0)
+                    data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1])), axis=1)
 
                     yield (data.copy(), 
                         chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values
