@@ -57,6 +57,7 @@ class DeepMotionPlanner():
         joystick_sub = rospy.Subscriber('/joy', Joy, self.joystick_callback)
         self.cmd_pub  = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.deep_plan_pub = rospy.Publisher('/deep_planner/path', Path, queue_size=1)
+        self.relative_target_pub  = rospy.Publisher('/relative_target', PoseStamped, queue_size=1)
 
         # We over the same action api as the move base package
         self._as = actionlib.SimpleActionServer('deep_move_base', MoveBaseAction, auto_start = False)
@@ -128,9 +129,14 @@ class DeepMotionPlanner():
                 # Prepare the input vector, perform the inference on the model 
                 # and publish a new command
                 goal = np.array(target)
-                angle = np.arctan2(goal[1],goal[0]) / np.pi
-                norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 10.0) / 10.0
-                data = np.stack((angle, norm, goal[2] / np.pi))
+                angle = np.arctan2(goal[1],goal[0])
+                norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 10.0)
+                data = np.array([angle, norm, goal[2]])
+                
+#                 goal = np.array(target)
+#                 angle = np.arctan2(goal[1],goal[0]) / np.pi
+#                 norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 10.0) / 10.0
+#                 data = np.stack((angle, norm, goal[2] / np.pi))
 
                 input_data = list(cropped_scans) + data.tolist()
 
@@ -206,6 +212,12 @@ class DeepMotionPlanner():
         orientation_to_target = tf.transformations.quaternion_multiply(q, \
                 tf.transformations.quaternion_inverse(p))
         yaw = tf.transformations.euler_from_quaternion(orientation_to_target)[2]
+
+        rel_target = PoseStamped()
+        rel_target.pose.position.x = goal_position_base_frame[0]
+        rel_target.pose.position.y = -goal_position_base_frame[1]
+        rel_target.pose.orientation.z = yaw
+        self.relative_target_pub.publish(rel_target)
 
         return (goal_position_base_frame[0], -goal_position_base_frame[1], yaw)
 
