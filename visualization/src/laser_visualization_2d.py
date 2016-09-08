@@ -36,7 +36,7 @@ class LaserVisualization2d():
     if self.do_plot_target():
       target_pos = (250+int(self.relative_target[1]*30), 250-int(self.relative_target[0]*30))
       length = 15.0
-      color_target = (0, 255, 0)
+      color_target = (255, 100, 0)
       x = math.trunc(length * math.cos(self.relative_target[2] - math.pi/2))
       y = math.trunc(length * math.sin(self.relative_target[2] - math.pi/2))
       cv2.circle(img=frame, center=target_pos, radius=4, thickness=2, color=color_target)
@@ -51,10 +51,7 @@ class LaserVisualization2d():
   def relative_target_callback(self, data):
     x = data.pose.position.x
     y = data.pose.position.y
-    phi = tf.transformations.euler_from_quaternion([data.pose.orientation.x,
-                                                   data.pose.orientation.y,
-                                                   data.pose.orientation.z,
-                                                   data.pose.orientation.w])[2]
+    phi = data.pose.orientation.z
     self.relative_target = [x, y, phi]
     self.relative_target_update_time = rospy.Time.now()
     
