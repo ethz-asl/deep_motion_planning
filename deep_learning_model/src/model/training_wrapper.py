@@ -14,14 +14,15 @@ import conv_model as model
 
 class TrainingWrapper():
     """Wrap the training"""
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, config, mail=False):
+        self.config = config
         self.coord = None
         self.runners = None
         self.sess = None
         self.custom_data_runner = None
         self.eval_n_elements = 8*8192
         self.eval_batch_size = 1024
+        self.mail = mail
 
     def __enter__(self):
         return self
@@ -46,23 +47,25 @@ class TrainingWrapper():
         logger = logging.getLogger(__name__)
 
         # Folder where to store snapshots, meta data and the final model
-        storage_path = os.path.join(self.args.train_dir, (time.strftime('%Y-%m-%d_%H-%M_') + model.NAME))
+        storage_path = os.path.join(self.config['snapshot_dir'], (time.strftime('%Y-%m-%d_%H-%M_') + model.NAME))
 
         logger.info('Build Tensorflow Graph')
         with tf.Graph().as_default():
 
             # Define the used machine learning model
-            global_step, learning_rate = model.learning_rate(self.args.learning_rate)
+            global_step, learning_rate = model.learning_rate(self.config['learning_rate'])
 
             self.sess = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=8))
 
             logger.info('Create the data runner for the input data')
-            self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**18)
+            self.custom_data_runner =  CustomDataRunner(self.config['training_data'], 
+                    self.config['batch_size'], 2**18)
             data_batch, cmd_batch = self.custom_data_runner.get_inputs()
 
             logger.info('Add operations to the computation graph')
             keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
-            prediction = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size, output_name='prediction')
+            prediction = model.inference(data_batch, keep_prob_placeholder,
+                    self.config['batch_size'], output_name='prediction')
 
             loss, loss_split = model.loss(prediction, cmd_batch)
 
@@ -112,29 +115,30 @@ class TrainingWrapper():
             tf.train.write_graph(self.sess.graph_def, os.path.join(storage_path), 'graph.pb', False) #proto
 
             # Vector to average the duration over the last report steps
-            duration_vector = [0.0] * (self.args.eval_steps // 100)
+            duration_vector = [0.0] * (self.config['evaluate_steps'] // 100)
 
 
-            if self.args.weight_initialize:
+            if 'weight_initialize' in self.config.keys():
 
                 logger.info('Initialize with weights from another model')
+                weight_initialize = self.config['weight_initialize']
 
-                if os.path.exists(self.args.weight_initialize):
-                    saver.restore(self.sess, self.args.weight_initialize)
-                    logger.info('Model restored: {}'.format(self.args.weight_initialize))
+                if os.path.exists(weight_initialize):
+                    saver.restore(self.sess, weight_initialize)
+                    logger.info('Model restored: {}'.format(weight_initialize))
                 else:
                     logger.warning('No weights are loaded!')
-                    logger.warning('File does not exist: {}'.format(self.args.weight_initialize))
+                    logger.warning('File does not exist: {}'.format(weight_initialize))
 
             logger.info('Load the evaluation data')
-            (X_eval,Y_eval) = DataHandler(self.args.datafile_eval, self.eval_n_elements,
+            (X_eval,Y_eval) = DataHandler(self.config['evaluation_data'], self.eval_n_elements,
                     shuffle=False).next_batch()
 
             loss_train = 0.0
             # Perform all training steps
 
             logger.info('Training begins')
-            for step in range(self.args.max_steps):
+            for step in range(self.config['number_of_steps']):
                 start_time = time.time()
 
                 feed_dict = {keep_prob_placeholder: 0.5}
@@ -153,10 +157,10 @@ class TrainingWrapper():
                     loss_train = loss_value
 
                     # Replace the durations in fifo fashion
-                    duration_vector[((step % self.args.eval_steps)//100)] = duration
+                    duration_vector[((step % self.config['evaluate_steps'])//100)] = duration
 
                 # Evaluatie the model
-                if step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
+                if step > 0 and step % self.config['evaluate_steps'] == 0 or step == (self.config['number_of_steps'] - 1):
                     start_eval = time.time()
 
                     # Evaluate the model. We use only a constant fraction of the entire dataset to
@@ -218,7 +222,7 @@ class TrainingWrapper():
                     f.write(output_graph_def.SerializeToString())
                     logger.info("{} ops in the final graph.".format(len(output_graph_def.node)))
 
-        if self.args.mail:
+        if self.mail:
             self.send_notification(loss_train, loss_value)
 
     def send_notification(self, loss_train, loss_eval):

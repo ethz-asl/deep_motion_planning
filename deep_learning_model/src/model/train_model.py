@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import time
+import json
 
 import numpy as np
 import tensorflow as tf
@@ -20,29 +21,18 @@ def parse_args():
             parser.error("Unsupported file extension: Use {}".format(extensions))
         return filename
 
-    parser.add_argument('datafile_train', help='Filename of the training data', type=lambda
-            s:check_extension(['.h5'],s))
-    parser.add_argument('datafile_eval', help='Filename of the evaluation data', type=lambda
-            s:check_extension(['.h5'],s))
-    parser.add_argument('-s', '--max_steps', help='Number of batches to run', type=int, default=1000000)
-    parser.add_argument('-e', '--eval_steps', help='Evaluate model every N steps', type=int, default=25000)
-    parser.add_argument('-b', '--batch_size', help='Size of training batches', type=int,  default=16)
-    parser.add_argument('-t', '--train_dir', help='Directory to save the model snapshots',
-            default='./models/default')
-    parser.add_argument('-l', '--learning_rate', help='Initial learning rate', type=float, default=0.01)
-    parser.add_argument('--weight_initialize', help='Initialize network weights with this checkpoint\
-                        file', type=str)
+    parser.add_argument('config_file', help='Path to the configuration file (.json)', type=lambda
+            s:check_extension(['.json'],s))
+
     parser.add_argument('-m', '--mail', help='Send an email when training finishes',
             action='store_true')
     args = parser.parse_args()
 
     return args
 
-    return data_placeholder, cmd_placeholder
-
-def run_training(args):
+def run_training(config, mail):
     """Train a tensorflow model"""
-    with TrainingWrapper(args) as wrapper:
+    with TrainingWrapper(config, mail) as wrapper:
         wrapper.run()
 
 def main():
@@ -50,10 +40,12 @@ def main():
     logger.info('Train our model on the given dataset:')
 
     args = parse_args()
-    logger.info(args.datafile_train)
+
+    with open(args.config_file, 'r') as config_file:
+        config = json.load(config_file)
 
     logger.info('Start training')
-    run_training(args)
+    run_training(config, args.mail)
 
 if __name__ == "__main__":
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'

@@ -1,0 +1,9 @@
+{
+  "snapshot_dir"    : "models/default/",
+  "training_data"   : "data/processed/combined.h5",
+  "evaluation_data" : "data/processed/evaluation.h5",
+  "learning_rate"   : 0.0001,
+  "number_of_steps" : 2000000,
+  "evaluate_steps"  : 2500,
+  "batch_size"      : 128
+}

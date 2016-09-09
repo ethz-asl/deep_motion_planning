@@ -11,7 +11,6 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 #################################################################################
 
 DATASET = combined
-DATASET_EVAL = evaluation
 
 requirements:
 	pip install -q -r requirements.txt
@@ -20,9 +19,7 @@ data:
 	python src/data/make_dataset.py --random data/mixers/data.mix $(DATASET).h5
 
 train:
-	python src/model/train_model.py data/processed/$(DATASET).h5 \
-				 													data/processed/$(DATASET_EVAL).h5 \
-				 													-l 0.0001 -s 2000000 -b 128 --mail
+	python src/model/train_model.py config/default.json --mail
 
 clean:
 	find . -name "*.pyc" -exec rm {} \;
