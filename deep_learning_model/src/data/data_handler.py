@@ -71,14 +71,14 @@ class DataHandler():
         n_scans = 1080
         drop_n_elements = (len(laser_columns) - n_scans) // 2
 
-	if drop_n_elements < 0:
-		raise ValueError('Number of scans is to small: {} < {}'
-			.format(len(laser_columns), n_scans))
-	elif drop_n_elements > 0:
-		laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+        if drop_n_elements < 0:
+                raise ValueError('Number of scans is to small: {} < {}'
+                        .format(len(laser_columns), n_scans))
+        elif drop_n_elements > 0:
+                laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
 
-	if len(laser_columns) == n_scans+1:
-		laser_columns = laser_columns[0:-1]
+        if len(laser_columns) == n_scans+1:
+                laser_columns = laser_columns[0:-1]
         
         laser = np.minimum(df.iloc[:,laser_columns].values, self.perception_radius)
         goal = df.iloc[:,goal_columns].values
