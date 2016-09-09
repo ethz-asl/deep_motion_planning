@@ -11,6 +11,7 @@ class FastDataHandler():
         self.filepath = filepath
         self.chunksize = chunksize
         self.batchsize = batchsize
+        self.perception_radius = 10.0
 
         # Check if the parameters are valid
         if chunksize and not chunksize % batchsize == 0:
@@ -115,11 +116,13 @@ class FastDataHandler():
                 # Return the batches from the current data chunk that is in memory
                 for j in range(chunk.shape[0] // self.batchsize):
                     
-                    laser = chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,laser_columns].values
+                    laser =
+                    np.minimum(chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,laser_columns].values,
+                            self.perception_radius)
                     goal =  chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,goal_columns].values
                     angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.batchsize, 1])
                     norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2,
-                        axis=1).reshape([self.batchsize, 1]), 10.0)
+                        axis=1).reshape([self.batchsize, 1]), self.perception_radius)
                     data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1])), axis=1)
 
                     yield (data.copy(), 

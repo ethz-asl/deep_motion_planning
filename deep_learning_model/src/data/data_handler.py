@@ -8,6 +8,7 @@ class DataHandler():
         self.filepath = filepath
         self.chunksize = chunksize
         self.shuffle = shuffle
+        self.perception_radius = 10.0
 
         if not os.path.exists(filepath):
             raise IOError('File does not exists: {}'.format(filepath))
@@ -79,10 +80,10 @@ class DataHandler():
 	if len(laser_columns) == n_scans+1:
 		laser_columns = laser_columns[0:-1]
         
-        laser = df.iloc[:,laser_columns].values
+        laser = np.minimum(df.iloc[:,laser_columns].values, self.perception_radius)
         goal = df.iloc[:,goal_columns].values
         angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.chunksize, 1])
-        norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2, axis=1).reshape([self.chunksize, 1]), 10.0)
+        norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2, axis=1).reshape([self.chunksize, 1]), self.perception_radius)
         data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1])), axis=1)
 
         return (data.copy(), df.iloc[:, cmd_columns].copy(deep=True).values)

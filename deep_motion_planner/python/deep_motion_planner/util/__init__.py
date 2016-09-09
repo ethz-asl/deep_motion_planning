@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import numpy as np
 import tf
 import rospy
 
@@ -32,7 +33,7 @@ def compute_relative_target_raw(current_pose, target_pose):
 
   return (goal_position_base_frame[0], -goal_position_base_frame[1], yaw)
 
-def adjust_laser_scans_to_model(raw_scan_ranges, scan_stride, n_scans_output):
+def adjust_laser_scans_to_model(raw_scan_ranges, scan_stride, n_scans_output, perception_radius=10.0):
   scans = list(raw_scan_ranges[::scan_stride])
   cut_n_elements = (len(scans) - n_scans_output) // 2
   cropped_scans = scans
@@ -43,4 +44,4 @@ def adjust_laser_scans_to_model(raw_scan_ranges, scan_stride, n_scans_output):
     rospy.logdebug("Input vector has one scan too much. Cutting off last one.")
     cropped_scans = cropped_scans[0:-1]
   
-  return cropped_scans
+  return np.minimum(cropped_scans, perception_radius).tolist()
