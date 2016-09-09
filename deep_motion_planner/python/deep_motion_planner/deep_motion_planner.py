@@ -5,8 +5,10 @@ import threading
 import time
 import os
 import math
+import copy
 
 # Messages
+from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped, Point, Quaternion
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
@@ -51,12 +53,19 @@ class DeepMotionPlanner():
             rospy.logerr('Please check the parameter: {}'.format(rospy.resolve_name('~protobuf_file')))
             exit()
        
+        # Use a separate thread to process the received data
+        self.interrupt_event = threading.Event()
+        self.processing_thread = threading.Thread(target=self.processing_data)
+        self.scan_lock = threading.Lock()
+
         # ROS topics
         scan_sub = rospy.Subscriber('scan', LaserScan, self.scan_callback)
         goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_topic_callback)
         joystick_sub = rospy.Subscriber('/joy', Joy, self.joystick_callback)
         self.cmd_pub  = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.deep_plan_pub = rospy.Publisher('/deep_planner/path', Path, queue_size=1)
+        self.input_goal_pub = rospy.Publisher('/deep_planner/input/goal', Float32MultiArray, queue_size=1)
+        self.input_laser_pub = rospy.Publisher('/deep_planner/input/laser', LaserScan, queue_size=1)
 
         # We over the same action api as the move base package
         self._as = actionlib.SimpleActionServer('deep_move_base', MoveBaseAction, auto_start = False)
@@ -64,10 +73,6 @@ class DeepMotionPlanner():
         self._as.register_preempt_callback(self.preempt_callback)
 
         self.transform_listener = tf.TransformListener()
-
-        # Use a separate thread to process the received data
-        self.interrupt_event = threading.Event()
-        self.processing_thread = threading.Thread(target=self.processing_data)
 
         self.processing_thread.start()
         self._as.start()
@@ -88,7 +93,9 @@ class DeepMotionPlanner():
         """
         Callback function for the laser scan messages
         """
+        self.scan_lock.acquire()
         self.last_scan = data
+        self.scan_lock.release()
       
 
     def processing_data(self):
@@ -123,7 +130,26 @@ class DeepMotionPlanner():
                 if not target:
                     continue
 
+                self.scan_lock.acquire()
+                scan_msg = copy.copy(self.last_scan)
+                self.scan_lock.release()
+
                 cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans)
+
+                # Publish the scan data fed into the network
+                cropped_scan_msg = LaserScan()
+                cropped_scan_msg.header = scan_msg.header
+                cropped_scan_msg.angle_increment = scan_msg.angle_increment / self.laser_scan_stride
+                cropped_scan_msg.angle_min = -self.n_laser_scans * cropped_scan_msg.angle_increment / 2
+                cropped_scan_msg.angle_max = self.n_laser_scans * cropped_scan_msg.angle_increment / 2
+                cropped_scan_msg.time_increment = scan_msg.time_increment
+                cropped_scan_msg.scan_time = scan_msg.scan_time
+                cropped_scan_msg.scan_time = scan_msg.scan_time
+                cropped_scan_msg.range_min = scan_msg.range_min
+                cropped_scan_msg.range_max = scan_msg.range_max
+                cropped_scan_msg.ranges = cropped_scans
+                self.input_laser_pub.publish(cropped_scan_msg)
+
                 
                 # Prepare the input vector, perform the inference on the model 
                 # and publish a new command
@@ -131,6 +157,11 @@ class DeepMotionPlanner():
                 angle = np.arctan2(goal[1],goal[0])
                 norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 10.0)
                 data = np.stack((angle, norm, goal[2]))
+
+                # Publish the goal pose fed into the network
+                goal_msg = Float32MultiArray()
+                goal_msg.data = data
+                self.input_goal_pub.publish(goal_msg)
 
                 input_data = list(cropped_scans) + data.tolist()
 
