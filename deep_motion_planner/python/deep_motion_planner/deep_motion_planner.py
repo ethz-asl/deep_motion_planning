@@ -136,6 +136,9 @@ class DeepMotionPlanner():
 
                 cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans)
 
+                if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
+                    rospy.logerr('Scan contained invalid float (nan or inf)')
+
                 # Publish the scan data fed into the network
                 cropped_scan_msg = LaserScan()
                 cropped_scan_msg.header = scan_msg.header
