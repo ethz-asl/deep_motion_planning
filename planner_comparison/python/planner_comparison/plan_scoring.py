@@ -119,7 +119,7 @@ class Mission():
                     self.obstacle_closeness, 
                     self.final_goal_dist, 
                     self.inverse_avg_speed]
-    feature_names = ['e_rot', 'e_trans', 'd_obj', 'd_goal', 'speed']
+    feature_names = ['rot_en.', 'trans_en.', 'd_obj', 'd_goal', 'speed']
     feature_weights = [1.0, 1.0, 1.0, 1.0, 1.0]
     
     cost = 0.0

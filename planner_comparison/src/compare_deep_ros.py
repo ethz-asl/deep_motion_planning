@@ -59,8 +59,15 @@ def compute_deep_plan(tensorflow_wrapper, scan_ranges, relative_target):
   """
   Compute the result of the deep motion planner for a specific timestamp
   """
-  cropped_scans = dmp_util.adjust_laser_scans_to_model(scan_ranges, 2, 540)
-  input_data = cropped_scans + list(relative_target)
+  cropped_scans = dmp_util.adjust_laser_scans_to_model(scan_ranges, 1, 1080, max_range = 10.0)
+  
+  # Compute target in range and yaw format
+  goal = np.array(relative_target)
+  angle = np.arctan2(goal[1],goal[0])
+  norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 10.0)
+  data = np.array([angle, norm, goal[2]])
+  
+  input_data = cropped_scans.tolist() + data.tolist()
   
   linear_x, angular_z = tensorflow_wrapper.inference(input_data)
   cmd = Twist()
@@ -71,14 +78,15 @@ def compute_deep_plan(tensorflow_wrapper, scan_ranges, relative_target):
 ################## Setup #####################
 pl.close('all')
 args = parse_args()
-plot_velocities_switch = False
+plot_velocities_switch = True
 plot_trajectory_switch = False
-plot_errors_swtich = False
+plot_errors_swtich = True
 run_comparison = True
-logger = logging.Logger('deep_evaluation', level=20) # INFO: 20 | DEBUG: 10
+logging.basicConfig(level=logging.INFO) # INFO: 20 | DEBUG: 10
 data_storage = {}
 ##############################################
 
+logging.info('Loading the data ...')
 rosbag_if = RosbagInterface(args.logPath)
 msg_container = rosbag_if.msg_container
 
@@ -100,7 +108,7 @@ if run_comparison:
        
        
       # Compute relative target (in robot frame)
-      relative_target = dmp_util.compute_relative_target_raw(current_pos.feedback.base_position, current_goal)
+      relative_target = dmp_util.compute_relative_target_raw(current_pos.pose, current_goal)
       vel_cmd_deep.times.append(t)
       vel_cmd_deep.msgs.append(compute_deep_plan(tf_wrapper, scan_ranges=current_scan.ranges, relative_target=relative_target))
       cnt +=1
@@ -124,6 +132,8 @@ if run_comparison:
   mean_rot_error = np.mean(vel_rot_diff)
   std_rot_error = np.std(vel_rot_diff)
    
+  data_storage['vel_trans_diff'] = vel_trans_diff
+  data_storage['vel_rot_diff'] = vel_rot_diff
   data_storage['trans_error'] = (mean_trans_error, std_trans_error)
   data_storage['rot_error'] = (mean_rot_error, std_rot_error)
    
@@ -146,7 +156,7 @@ if run_comparison:
     ax_trans.set_ylim([-1., 1.])
     ax_trans.set_ylabel('trans_vel [m/s]')
     ax_trans.grid('on')
-    ax_rot.set_ylim([-1., 1.])
+    ax_rot.set_ylim([-2., 2.])
     ax_rot.set_ylabel('rot_vel [rad/s]')
     ax_rot.set_xlabel('time [s]')
     ax_rot.grid('on')
