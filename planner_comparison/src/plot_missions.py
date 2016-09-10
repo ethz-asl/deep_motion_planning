@@ -54,7 +54,7 @@ fig_width_pt = 245.71811                # Get this from LaTeX using \showthe\col
 inches_per_pt = 1.0/72.27               # Convert pt to inch
 # golden_mean = (np.sqrt(5)-1.0)/2.0    # Aesthetic ratio
 fig_width = fig_width_pt*inches_per_pt  # width in inches
-fig_height = fig_width*1.0      # height in inches
+fig_height = fig_width*0.9      # height in inches
 fig_size =  [fig_width,fig_height]
 fontsize = 9
 params = {'backend': 'ps',
@@ -112,7 +112,7 @@ ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
 ax.yaxis.grid()
 
 if two_maps:
-  ax = pl.ax = pl.subplot2grid((5,2), (0,1), rowspan=2)
+  ax = pl.ax = pl.subplot2grid((5,2), (0,1), rowspan=3)
   plot_trajectory_comparison(ax, planner_missions2[0], planner_missions2[1], grid, colors=['g', 'k'], show_labels=False)
   ax.get_xaxis().set_ticks([])
   ax.get_yaxis().set_ticks([])

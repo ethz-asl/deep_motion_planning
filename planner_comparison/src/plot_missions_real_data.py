@@ -49,18 +49,17 @@ pl.rc('text', usetex=True)
 pl.rc('font', family='serif')
  
 data_path = rospkg.RosPack().get_path('planner_comparison') + "/data/"
-names = ['Ros', 'Deep']
+names = ['Deep', 'Ros']
 
-planner_missions = {}
+planner_missions = []
 
 for path in args.paths:
   planner_name = path.split('/')[-1][:-4] 
   rosbag_if = RosbagInterface(path)
   missions = extract_missions(rosbag_if.msg_container)
-  planner_missions[planner_name] = missions
+  planner_missions.append(missions)
   
-colors = ['k', 'g']
-joystick_interference_bag_name = 'deep_h_floor_big'
+colors = ['g', 'k']
 manual_offset_x = 0.25
 manual_offset_y = 0.25
 map = rosbag_if.msg_container['map'].msgs[0]
@@ -72,11 +71,11 @@ map_offset = [map.info.origin.position.x * map.info.resolution + manual_offset_x
 pl.imshow(grid, extent=[-map_size[0] + map_offset[0], map_size[0] + map_offset[0], -map_size[1] + map_offset[1], map_size[1] + map_offset[1]], origin='lower', cmap='Greys')
 handles = []
 joystick_handle = None
-for ii, name in enumerate(planner_missions.keys()):
-  for jj, m in enumerate(planner_missions[name]):
+for ii, missions in enumerate(planner_missions):
+  for jj, m in enumerate(missions):
     plot_numbers = True if ii is 0 else False
     th = pc_util.plot_mission(ax, m, jj+1, color=colors[ii], plot_numbers=plot_numbers)
-    if name == joystick_interference_bag_name:
+    if ii == 0:
       jh = pc_util.plot_joystick_interference(ax, m, color='m', alpha=1.0, linewidth=1.0)
       if len(jh) > 0:
         joystick_handle = jh
