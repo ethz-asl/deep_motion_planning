@@ -2,6 +2,7 @@
 
 import tf
 import rospy
+import numpy as np
 
 def compute_relative_target_raw(current_pose, target_pose):
   """
