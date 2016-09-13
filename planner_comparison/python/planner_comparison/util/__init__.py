@@ -36,12 +36,15 @@ def joystick_active_time_intervals(mission):
     time_intervals.append((t_time, find_next_joystick_release_time(t_time, mission)))
   return time_intervals
 
-def plot_joystick_interference(ax, mission, color='r', alpha=1.0, linewidth=1.0 ):
+def get_joystick_trajectories(mission):
   joystick_intervals = joystick_active_time_intervals(mission)
   trajectories = []
   for interval in joystick_intervals:
     trajectories.append(mission.get_trajectory_for_time_interval(interval))
-  
+  return trajectories
+
+def plot_joystick_interference(ax, mission, color='r', alpha=1.0, linewidth=1.0 ):
+  trajectories = get_joystick_trajectories(mission)
   th = []
   for traj in trajectories:
 #     t = ax.plot(traj[0,:], traj[1,:], color=color, alpha=alpha, linewidth=1, marker='o', markersize=2, mew=0.1, mec='none', mfc=color)
@@ -50,14 +53,14 @@ def plot_joystick_interference(ax, mission, color='r', alpha=1.0, linewidth=1.0 
   return th
   
   
-def plot_mission(ax, mission, id=None, color='b', plot_numbers=False, plot_joystick=False, fontsize=9):
+def plot_mission(ax, mission, id=None, color='b', plot_numbers=False, plot_joystick=False, fontsize=9, alpha=1.0, linewidth=1.0):
   traj = mission.get_trajectory()
   
   try:
     goal = mission.goal.pose.position
   except AttributeError:
     goal = mission.goal.goal.target_pose.pose.position
-  th = ax.plot(traj[0,:], traj[1,:], color=color)
+  th = ax.plot(traj[0,:], traj[1,:], color=color, alpha=alpha)
   ax.plot(goal.x, goal.y, marker='o', mfc='r', mec='r')
   if id==0 and plot_numbers:
     ax.plot(traj[0,0], traj[1,0], marker='o', mfc='r', mec='r')
@@ -95,3 +98,27 @@ def get_complete_missions(missions):
       complete.append(False)
       
   return complete
+
+
+def compute_joystick_distance(mission):
+  joystick_distance = 0.0
+  joystick_trajs = get_joystick_trajectories(mission)
+  
+  for traj in joystick_trajs:
+    if traj.shape[1] > 1:
+      pos_old = traj[:,0]
+      for ii in range(1, len(traj)):
+        pos_new = traj[:,ii]
+        joystick_distance += np.linalg.norm(pos_new-pos_old)
+    else:
+      joystick_distance += 0.03
+      
+  return joystick_distance
+
+def compute_autonomous_percent_mission(mission):
+  if absolute_distance > 0:
+    return 1.0 - compute_joystick_distance(mission) / mission.distance()
+  else: 
+    return 1.0
+  
+  

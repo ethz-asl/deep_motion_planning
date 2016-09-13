@@ -25,7 +25,7 @@ class Mission():
     self.goal = PoseStamped
     self.start_time = rospy.Time()
     self.end_time = rospy.Time()
-    self.params = {'threshold_range': 0.3}
+    self.params = {'threshold_range': 0.2}
     
   def get_trajectory(self):
     traj = np.zeros([2, len(self.loc_msgs)])

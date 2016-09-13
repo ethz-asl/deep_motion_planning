@@ -15,7 +15,7 @@ def parse_args():
     Parse input arguments.
     """
     parser = argparse.ArgumentParser(description='Compare different motion planners')
-    parser.add_argument('--paths', nargs='+', help='List of bag files that should be analyzed', type=str, required=True)
+    parser.add_argument('--paths', nargs='+', help='List of bag files that should be analyzed', type=str, required=False)
     args = parser.parse_args()
     return args
 
@@ -27,7 +27,7 @@ fig_width_pt = 245.71811                # Get this from LaTeX using \showthe\col
 inches_per_pt = 1.0/72.27               # Convert pt to inch
 # golden_mean = (np.sqrt(5)-1.0)/2.0    # Aesthetic ratio
 fig_width = fig_width_pt*inches_per_pt  # width in inches
-fig_height = fig_width*1.0      # height in inches
+fig_height = fig_width*0.8      # height in inches
 fig_size =  [fig_width,fig_height]
 fontsize = 9
 params = {'backend': 'ps',
@@ -51,13 +51,29 @@ pl.rc('font', family='serif')
 data_path = rospkg.RosPack().get_path('planner_comparison') + "/data/"
 names = ['Deep', 'Ros']
 
-planner_missions = []
+paths_comparison = ['/data/rosbags/deep_motion_planning/turtle/SO_smallFC_2M.bag',
+                    '/data/rosbags/deep_motion_planning/turtle/ros_planner.bag']
 
-for path in args.paths:
-  planner_name = path.split('/')[-1][:-4] 
+# paths_background = ['/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_2nd_run.bag',
+#                     '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_3rd_run.bag',
+#                     '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_4th_run.bag',
+#                     '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_5th_run.bag',
+#                     '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_6th_run.bag']
+paths_background = []
+
+planner_missions = []
+planner_missions_background = []
+
+for path in paths_comparison:
   rosbag_if = RosbagInterface(path)
   missions = extract_missions(rosbag_if.msg_container)
   planner_missions.append(missions)
+  
+for idx, path in enumerate(paths_background):
+  print('Extracting background path {0}'.format(idx+1))
+  rosbag_if = RosbagInterface(path)
+  missions = extract_missions(rosbag_if.msg_container)
+  planner_missions_background.append(missions)
   
 colors = ['g', 'k']
 manual_offset_x = 0.25
@@ -71,6 +87,10 @@ map_offset = [map.info.origin.position.x * map.info.resolution + manual_offset_x
 pl.imshow(grid, extent=[-map_size[0] + map_offset[0], map_size[0] + map_offset[0], -map_size[1] + map_offset[1], map_size[1] + map_offset[1]], origin='lower', cmap='Greys')
 handles = []
 joystick_handle = None
+for missions in planner_missions_background:
+  for m in missions:
+    pc_util.plot_mission(ax, m, None, color='g', plot_numbers=False, alpha=0.3)
+    pc_util.plot_joystick_interference(ax, m, color='m', alpha=0.3, linewidth=1.0)
 for ii, missions in enumerate(planner_missions):
   for jj, m in enumerate(missions):
     plot_numbers = True if ii is 0 else False
@@ -84,16 +104,28 @@ for ii, missions in enumerate(planner_missions):
 ax.set_xlabel('x [m]', fontsize=fontsize)
 ax.set_ylabel('y [m]', fontsize=fontsize)
 pl.axis('equal')
-ax.set_xlim([-15.5, 0])
-ax.set_ylim([-10.5, 6.5])
+ax.set_xlim([-15, 6])
+ax.set_ylim([-8, 2])
 ax.tick_params(labelsize=fontsize)
 pl.legend((handles[0][0], handles[1][0], joystick_handle[0][0]), (names[0], names[1], 'Joystick'), loc='best', fancybox=True, framealpha=0.5, numpoints=1)
 pl.locator_params(nbins=8)
 pl.tight_layout()
 pl.subplots_adjust(left=0.17, right=0.95, top=0.95, bottom=0.15)
 
-if save_figures:
-  print('Saving figure.')
-  pl.savefig(os.path.join(figure_path, 'comparison_real_robot.pdf'))
+
+abs_dist = np.zeros([len(planner_missions[0])])
+joy_dist = np.zeros([len(planner_missions[0])])
+fused_missions = planner_missions_background
+fused_missions.append(planner_missions[0])
+for miss in fused_missions:
+  for ii, m in enumerate(miss):
+    abs_dist[ii] += m.distance()
+    joy_dist[ii] += pc_util.compute_joystick_distance(m)
+
+autonomous_ratio = 100 * (1 - joy_dist / abs_dist)
+
+# if save_figures:
+#   print('Saving figure.')
+#   pl.savefig(os.path.join(figure_path, 'comparison_real_robot.pdf'))
 
 pl.show(block=False)

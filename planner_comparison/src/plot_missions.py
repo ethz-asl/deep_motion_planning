@@ -29,9 +29,9 @@ def compute_relative_cost_deep(cost_deep, cost_ros):
 def plot_trajectory_comparison(ax, deep_missions, ros_missions, grid, colors=['g', 'k'], show_labels=False):
   pl.imshow(grid, extent=[-5, 5, -5, 5], origin='lower', cmap='Greys')
   for idx, m in enumerate(deep_missions):
-    dh = pc_util.plot_mission(ax, m, idx, color=colors[0], plot_numbers=True)
+    dh = pc_util.plot_mission(ax, m, idx+1, color=colors[0], plot_numbers=True)
   for idx, m in enumerate(ros_missions):
-    rh = pc_util.plot_mission(ax, m, idx, color=colors[1], plot_numbers=False)
+    rh = pc_util.plot_mission(ax, m, idx+1, color=colors[1], plot_numbers=False)
   if show_labels:
     pl.legend((dh[0], rh[0]), ('Deep', 'ROS'), fancybox=True, framealpha=0.5)
     
@@ -81,6 +81,8 @@ for path in args.paths1:
   rosbag_if = RosbagInterface(path)
   missions = extract_missions(rosbag_if.msg_container)
   planner_missions1.append(missions)
+  map = rosbag_if.msg_container['map'].msgs[0]
+  grid1 = np.reshape(map.data, [map.info.height, map.info.width])
   
 two_maps = len(args.paths2) > 0
 if two_maps:
@@ -88,6 +90,8 @@ if two_maps:
     rosbag_if = RosbagInterface(path)
     missions = extract_missions(rosbag_if.msg_container)
     planner_missions2.append(missions)
+    map = rosbag_if.msg_container['map'].msgs[0]
+    grid2 = np.reshape(map.data, [map.info.height, map.info.width])
   
 colors = ['g', 'k']  
 map = rosbag_if.msg_container['map'].msgs[0]
@@ -98,7 +102,7 @@ if two_maps:
   ax = pl.subplot2grid((5,2), (0,0), rowspan=3)
 else:
   ax = pl.subplot2grid((5,1), (0,0), rowspan=3)
-plot_trajectory_comparison(ax, planner_missions1[0], planner_missions1[1], grid, colors=['g', 'k'], show_labels=False)
+plot_trajectory_comparison(ax, planner_missions1[0], planner_missions1[1], grid1, colors=['g', 'k'], show_labels=False)
 ax.get_xaxis().set_ticks([])
 ax.get_yaxis().set_ticks([])
 
@@ -108,19 +112,19 @@ else:
   ax = pl.ax = pl.subplot2grid((5,1), (3,0), rowspan=2)
 plot_relative_error(ax, planner_missions1[0], planner_missions1[1], colors=['g', 'k'], show_labels=True)
 ax.legend(loc='best', fancybox = True, framealpha = 0.5)
-ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
+ax.yaxis.set_major_locator(ticker.MultipleLocator(30))
 ax.yaxis.grid()
 
 if two_maps:
   ax = pl.ax = pl.subplot2grid((5,2), (0,1), rowspan=3)
-  plot_trajectory_comparison(ax, planner_missions2[0], planner_missions2[1], grid, colors=['g', 'k'], show_labels=False)
+  plot_trajectory_comparison(ax, planner_missions2[0], planner_missions2[1], grid2, colors=['g', 'k'], show_labels=False)
   ax.get_xaxis().set_ticks([])
   ax.get_yaxis().set_ticks([])
 
   ax = pl.ax = pl.subplot2grid((5,2), (3,1), rowspan=2)
   plot_relative_error(ax, planner_missions2[0], planner_missions2[1], colors=['g', 'k'], show_labels=False)
   ax.legend(loc='best', fancybox = True, framealpha = 0.5)
-  ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
+  ax.yaxis.set_major_locator(ticker.MultipleLocator(30))
   ax.yaxis.grid()
 
 
