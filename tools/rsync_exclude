@@ -1,0 +1,8 @@
+.git
+*.pyc
+*.h5
+*.csv
+*.tar.gz
+.tags
+*.tfrecords
+models/
