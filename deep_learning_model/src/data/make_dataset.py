@@ -14,6 +14,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Fuse csv files and prepare data')
     parser.add_argument('mixer_file', help='Path to the mixer definition')
     parser.add_argument('--random', help='Select the files randomly', action='store_true')
+    parser.add_argument('--list', help='Use list of files as mixer', action='store_true')
 
     def check_extension(extensions, filename):
         ext = os.path.splitext(filename)[1]
@@ -50,12 +51,18 @@ def parse_mixer_file(filepath):
 
             splits= line.split(' ')
 
-            if len(splits) == 2:
+            if len(splits) == 3:
                 path = splits[0].strip()
                 num_trajectories = int(splits[1])
+                num_samples = int(splits[2])
+            elif len(splits) == 2:
+                path = splits[0].strip()
+                num_trajectories = int(splits[1])
+                num_samples = -1
             elif len(splits) == 1:
                 path = splits[0].strip()
                 num_trajectories = -1
+                num_samples = -1
             else:
                 raise ValueError('Invalid number of values in line {}: {}'.format(i+1,
                     line.strip()))
@@ -65,39 +72,72 @@ def parse_mixer_file(filepath):
             else:
                 logger.info('Take {} files from {}'.format(num_trajectories, path))
 
-            mixer.append((path, num_trajectories))
+            mixer.append((path, num_trajectories, num_samples))
 
         if len(mixer) == 0:
             raise ValueError('Mixer file did not contain any valid element')
 
     return mixer
 
-def get_file_list(mixer_file, select_random):
+def get_file_list(mixer_file, select_random, use_list_of_files):
     """
     Take a mixer file and return a list of .csv files
     """
     logger = logging.getLogger(get_file_list.__name__)
-    mixer = parse_mixer_file(mixer_file)
     files = list()
 
-    for m in mixer:
-        path = os.path.join(project_dir, m[0])
-        current_files = [os.path.join(path,f) for f in os.listdir(path) 
-                         if os.path.isfile(os.path.join(path, f)) and f.split('.')[-1] == 'csv']
+    if use_list_of_files:
+        with open(mixer_file, 'r') as list_file:
+            for line in list_file:
+                files.append(os.path.join('data/raw',line.strip()))
+
+            if select_random:
+                random.shuffle(files)
+
+    else:
+
+        mixer = parse_mixer_file(mixer_file)
+
+        for m in mixer:
+            path = os.path.join(project_dir, m[0])
+            all_mixer_files = [os.path.join(path,f) for f in os.listdir(path) 
+                            if os.path.isfile(os.path.join(path, f)) and f.split('.')[-1] == 'csv']
+
+            current_files = list()
+            # Check if the number of samples is limited
+            if m[2] >= 0:
+                sample_count = 0
+                for f in all_mixer_files:
+                    # Get number of lines without the header line
+                    num_lines = sum(1 for line in open(f)) - 1
+
+                    if (sample_count + num_lines) > m[2]:
+                        current_files.append((f, m[2] - sample_count))
+                        sample_count += (m[2] - sample_count)
+                        break
+                    else:
+                        current_files.append((f, -1))
+                        sample_count += num_lines
+
+                if sample_count < m[2]:
+                    logger.warn('Not enough samples ({} < {}): {}'.format(sample_count, m[2], m[0]))
+            else:
+                # No limit, take all samples in the files
+                current_files = zip(all_mixer_files, [-1]*len(all_mixer_files))
+
+            if m[1] < 0:
+                # -1 means all .csv files
+                files += current_files
+            elif m[1] > 0:
+                if m[1] > len(current_files):
+                    logger.warn('Not enough files ({} < {}): {}'.format(len(current_files),
+                        m[1], m[0]))
+                files += current_files[:m[1]]
 
         if select_random:
-            random.shuffle(current_files)
+            random.shuffle(files)
         else:
-            current_files.sort(key=lambda x: int(os.path.basename(x).split('_')[-1].split('.')[0]))
-
-        if m[1] < 0:
-            # -1 means all .csv files
-            files += current_files
-        elif m[1] > 0:
-            if m[1] > len(current_files):
-                logger.warn('Not enough files ({} < {}) in path: {}'.format(len(current_files),
-                    m[1], m[0]))
-            files += current_files[:m[1]]
+            files = sorted(files, key=lambda x: int(os.path.basename(x[0]).split('_')[-1].split('.')[0]))
 
     return files
 
@@ -121,17 +161,17 @@ def main(project_dir):
 
     # Generate a list with all the csv files in the input folders
     logger.info('Parse mixer file: {}'.format(args.mixer_file))
-    all_files = get_file_list(os.path.join(project_dir, args.mixer_file), args.random)
+    all_files = get_file_list(os.path.join(project_dir, args.mixer_file), args.random, args.list)
 
     # Make shure, files in a sequence are not from the same source
     random.shuffle(all_files)
 
-    with pd.HDFStore(target_file) as store:
+    with pd.HDFStore(target_file, 'w') as store:
         num_elements = 0
 
-        longest_filename = max([len(x) for x in all_files])
+        longest_filename = max([len(x) for (x,_) in all_files])
         # Iterate over all input files and add them to the HDF5 container
-        for i,f in enumerate(all_files):
+        for i,(f,samples) in enumerate(all_files):
 
             # Avoid trailing characters if the previous string was longer
             filler = ' ' * (longest_filename - len(f))
@@ -141,12 +181,17 @@ def main(project_dir):
 
             # Make sure the final dataframe has a continous index
             current['original_index'] = current.index
-            current['target_id'] = i+1
             current.index = pd.Series(current.index) + num_elements
-            store.append('data', current)
+            current['target_id'] = i+1
 
-            num_elements += current.shape[0]
-                
+            # Negative means all samples in the file
+            if samples < 0:
+                store.append('data', current)
+                num_elements += current.shape[0]
+            else:
+                store.append('data', current.iloc[:samples])
+                num_elements += current.iloc[:samples].shape[0]
+
         print('')
 
     logger.info('We combined {} lines'.format(num_elements))
