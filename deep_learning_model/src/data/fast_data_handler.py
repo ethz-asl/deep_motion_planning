@@ -12,6 +12,7 @@ class FastDataHandler():
         self.chunksize = chunksize
         self.batchsize = batchsize
         self.perception_radius = 10.0
+        self.mean_filter_size = 5
 
         # Check if the parameters are valid
         if chunksize and not chunksize % batchsize == 0:
@@ -81,6 +82,11 @@ class FastDataHandler():
                     with pd.HDFStore(self.filepath, mode='r') as store:
                         chunk = store.select('data')
 
+                chunk['filtered_linear'] = pd.rolling_mean(chunk['linear_x'],
+                        window=self.mean_filter_size, center=True).fillna(chunk['linear_x'])
+                chunk['filtered_angular'] = pd.rolling_mean(chunk['angular_z'],
+                        window=self.mean_filter_size, center=True).fillna(chunk['angular_z'])
+
                 # Shuffle the data
                 chunk = chunk.reindex(np.random.permutation(chunk.index))
 
@@ -94,7 +100,7 @@ class FastDataHandler():
                             laser_columns.append(j)
                         if column.split('_')[0] in ['target'] and not column.split('_')[1] == 'id':
                             goal_columns.append(j)
-                        if column in ['linear_x','angular_z']:
+                        if column in ['filtered_linear','filtered_angular']:
                             cmd_columns.append(j)
 
                     #Only use the center n_scans elements as input
