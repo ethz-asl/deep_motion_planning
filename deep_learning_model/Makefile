@@ -24,6 +24,10 @@ train:
 				 													data/processed/$(DATASET_EVAL).h5 \
 				 													-l 0.0001 -s 2000000 -b 128 --mail
 
+eval:
+	python src/model/predict_model.py -c reports/evaluation.csv data/processed/$(DATASET_EVAL).h5 \
+																		../deep_motion_planner/models/model.pb
+
 clean:
 	find . -name "*.pyc" -exec rm {} \;
 
