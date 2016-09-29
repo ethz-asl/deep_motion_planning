@@ -21,6 +21,7 @@ class Config():
     use_snapshots = False # Specify if the model should be loaded from snapshots
     write_result = False # Specify if we write the results into a .csv file
     results = None # Path to the .csv result file
+    mean_filter_size = 5
 
 def parse_args():
     """Parse input arguments."""
@@ -49,6 +50,11 @@ def get_data(cfg):
     logger.info('Load evaluation data: {}'.format(cfg.data))
     df = pd.read_hdf(cfg.data)
 
+    df['filtered_linear'] = pd.rolling_mean(df['linear_x'],
+            window=cfg.mean_filter_size, center=True).fillna(df['linear_x'])
+    df['filtered_angular'] = pd.rolling_mean(df['angular_z'],
+            window=cfg.mean_filter_size, center=True).fillna(df['angular_z'])
+
     # Determine the columns of each category
     laser_columns = list()
     goal_columns = list()
@@ -58,7 +64,7 @@ def get_data(cfg):
             laser_columns.append(j)
         if column.split('_')[0] in ['target'] and not column.split('_')[1] == 'id':
             goal_columns.append(j)
-        if column in ['linear_x','angular_z']:
+        if column in ['filtered_linear','filtered_angular']:
             cmd_columns.append(j)
 
     logger.info('Preprocess data')
