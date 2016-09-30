@@ -18,6 +18,7 @@ class Config():
     number_of_scans = 1080 # Number of used laser scans
     model = None # Path to the evaluated model
     data = None # Path to the data used in the evaluation
+    eval_n_elements = 60000 # Number of samples used to evaluate the model
     use_snapshots = False # Specify if the model should be loaded from snapshots
     write_result = False # Specify if we write the results into a .csv file
     results = None # Path to the .csv result file
@@ -43,62 +44,13 @@ def parse_args():
 
     return args
 
-def get_data(cfg):
-    """Load and preprocess the evaluation data"""
-    logger = logging.getLogger(get_data.__name__)
-
-    logger.info('Load evaluation data: {}'.format(cfg.data))
-    df = pd.read_hdf(cfg.data)
-
-    df['filtered_linear'] = pd.rolling_mean(df['linear_x'],
-            window=cfg.mean_filter_size, center=True).fillna(df['linear_x'])
-    df['filtered_angular'] = pd.rolling_mean(df['angular_z'],
-            window=cfg.mean_filter_size, center=True).fillna(df['angular_z'])
-
-    # Determine the columns of each category
-    laser_columns = list()
-    goal_columns = list()
-    cmd_columns = list()
-    for j,column in enumerate(df.columns):
-        if column.split('_')[0] in ['laser']: 
-            laser_columns.append(j)
-        if column.split('_')[0] in ['target'] and not column.split('_')[1] == 'id':
-            goal_columns.append(j)
-        if column in ['filtered_linear','filtered_angular']:
-            cmd_columns.append(j)
-
-    logger.info('Preprocess data')
-    #Only use the center n_scans elements as input
-    n_scans = cfg.number_of_scans
-    drop_n_elements = (len(laser_columns) - n_scans) // 2
-
-    if drop_n_elements < 0:
-            raise ValueError('Number of scans is to small: {} < {}'
-                    .format(len(laser_columns), n_scans))
-    elif drop_n_elements > 0:
-            laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
-
-    if len(laser_columns) == n_scans+1:
-            laser_columns = laser_columns[0:-1]
-    
-    # Convert goal to polar system and limit perception radius
-    laser = np.minimum(df.iloc[:,laser_columns].values, cfg.perception_radius)
-    goal =  df.iloc[:,goal_columns].values
-    angle = np.arctan2(goal[:,1],goal[:,0]).reshape([len(df), 1])
-    norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2,
-        axis=1).reshape([len(df), 1]), cfg.perception_radius)
-
-    data = np.concatenate((laser, angle, norm, goal[:,2].reshape([len(df),1])), axis=1)
-    ground_truth = df.iloc[:, cmd_columns].values
-
-    return data, ground_truth
 
 def run_evaluation(cfg):
     """Test a tensorflow model"""
     logger = logging.getLogger(run_evaluation.__name__)
 
-    data, ground_truth = get_data(cfg)
-
+    data, ground_truth = DataHandler(cfg.data, cfg.eval_n_elements, shuffle=False).next_batch()
+    
     prediction = np.zeros(ground_truth.shape)
     samples = prediction.shape[0]
     tictoc = np.zeros(samples)
@@ -111,12 +63,9 @@ def run_evaluation(cfg):
         logger.info('Start model evaluation')
         for i in range(samples):
 
-            # Get the command prediction
             start_time = time.time()
-            cmd = model.inference(data[i,:])
+            prediction[i,:] = model.inference(data[i,:])
             tictoc[i%print_every] = time.time() - start_time
-
-            prediction[i,:] = cmd
 
             next_i = i+1
             if next_i > 0 and next_i % print_every == 0 or next_i == samples:
@@ -154,7 +103,7 @@ def main():
     logger.info(args.datafile_eval)
 
     cfg = Config()
-    cfg.model = args.model
+    cfg.model = os.path.abspath(args.model)
     cfg.data = args.datafile_eval
     cfg.use_snapshots = args.snapshots
     if args.capture:
