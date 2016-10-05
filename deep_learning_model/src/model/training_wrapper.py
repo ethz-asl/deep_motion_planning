@@ -20,7 +20,7 @@ class TrainingWrapper():
         self.runners = None
         self.sess = None
         self.custom_data_runner = None
-        self.eval_n_elements = 8*8192
+        self.eval_n_elements = 60000
         self.eval_batch_size = 1024
 
     def __enter__(self):
@@ -41,6 +41,13 @@ class TrainingWrapper():
         cmd_placeholder = tf.placeholder(tf.float32, shape=[None, cmd_size])
 
         return data_placeholder, cmd_placeholder
+
+    def check_extend(self, a, rows):
+        """Check if the array a has the correct number of rows. In case it is to small pad it with zeros"""
+        if a.shape[0] < rows:
+            a = np.concatenate((a, np.zeros((rows-a.shape[0], a.shape[1]))), axis=0)
+        
+        return a
 
     def run(self):
         logger = logging.getLogger(__name__)
@@ -129,6 +136,7 @@ class TrainingWrapper():
             logger.info('Load the evaluation data')
             (X_eval,Y_eval) = DataHandler(self.args.datafile_eval, self.eval_n_elements,
                     shuffle=False).next_batch()
+            X_eval = self.check_extend(X_eval, np.ceil(self.eval_n_elements / self.eval_batch_size) * self.eval_batch_size)
 
             loss_train = 0.0
             # Perform all training steps
@@ -159,20 +167,15 @@ class TrainingWrapper():
                 if step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
                     start_eval = time.time()
 
-                    # Evaluate the model. We use only a constant fraction of the entire dataset to
-                    # reduce the computation time, yet get a rough estimate of the model's
-                    # generalization performance
-
                     # Create an empty array, that has the correct size for to hold all predictions
-                    eval_predictions = np.zeros([self.eval_n_elements,2], dtype=np.float)
+                    eval_predictions = np.zeros([X_eval.shape[0],2], dtype=np.float)
 
                     # Evaluate the data in batches and capture the predictions
-                    for index in range(self.eval_n_elements // self.eval_batch_size):
+                    for index in range(X_eval.shape[0] // self.eval_batch_size):
                         start_index = index*self.eval_batch_size
                         end_index = (index+1)*self.eval_batch_size
                         feed_dict = {
                                 eval_data_placeholder: X_eval[start_index:end_index,:],
-                                eval_cmd_placeholder: Y_eval[start_index:end_index,:],
                                 keep_prob_placeholder: 1.0
                                 }
                         eval_predictions[start_index:end_index,:] = self.sess.run([eval_prediction],
@@ -180,7 +183,7 @@ class TrainingWrapper():
 
                     # Finally evaluate the predictions and compute the scores
                     feed_dict = {
-                            eval_predictions_placeholder: eval_predictions,
+                            eval_predictions_placeholder: eval_predictions[:self.eval_n_elements,:],
                             eval_cmd_placeholder:  Y_eval,
                             keep_prob_placeholder: 1.0
                             }

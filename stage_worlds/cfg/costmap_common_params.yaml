@@ -2,7 +2,7 @@
 robot_radius: 0.178
 footprint_padding: 0.01
 
-inflation_radius: 0.5
+inflation_radius: 0.75
 
 resolution: 0.025
 

@@ -9,6 +9,7 @@ class DataHandler():
         self.chunksize = chunksize
         self.shuffle = shuffle
         self.perception_radius = 10.0
+        self.mean_filter_size = 5
 
         if not os.path.exists(filepath):
             raise IOError('File does not exists: {}'.format(filepath))
@@ -56,6 +57,11 @@ class DataHandler():
         ind = next(self.batches)
         df = pd.read_hdf(self.filepath, 'data', where='index=ind')
 
+        df['filtered_linear'] = pd.rolling_mean(df['linear_x'],
+                window=self.mean_filter_size, center=True).fillna(df['linear_x'])
+        df['filtered_angular'] = pd.rolling_mean(df['angular_z'],
+                window=self.mean_filter_size, center=True).fillna(df['angular_z'])
+
         laser_columns = list()
         goal_columns = list()
         cmd_columns = list()
@@ -64,21 +70,21 @@ class DataHandler():
                 laser_columns.append(j)
             if column.split('_')[0] in ['target'] and not column.split('_')[1] == 'id':
                 goal_columns.append(j)
-            if column in ['linear_x','angular_z']:
+            if column in ['filtered_linear','filtered_angular']:
                 cmd_columns.append(j)
 
         #Only use the center n_scans elements as input
         n_scans = 1080
         drop_n_elements = (len(laser_columns) - n_scans) // 2
 
-	if drop_n_elements < 0:
-		raise ValueError('Number of scans is to small: {} < {}'
-			.format(len(laser_columns), n_scans))
-	elif drop_n_elements > 0:
-		laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
+        if drop_n_elements < 0:
+                raise ValueError('Number of scans is to small: {} < {}'
+                        .format(len(laser_columns), n_scans))
+        elif drop_n_elements > 0:
+                laser_columns = laser_columns[drop_n_elements:-drop_n_elements]
 
-	if len(laser_columns) == n_scans+1:
-		laser_columns = laser_columns[0:-1]
+        if len(laser_columns) == n_scans+1:
+                laser_columns = laser_columns[0:-1]
         
         laser = np.minimum(df.iloc[:,laser_columns].values, self.perception_radius)
         goal = df.iloc[:,goal_columns].values

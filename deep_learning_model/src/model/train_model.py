@@ -38,8 +38,6 @@ def parse_args():
 
     return args
 
-    return data_placeholder, cmd_placeholder
-
 def run_training(args):
     """Train a tensorflow model"""
     with TrainingWrapper(args) as wrapper:

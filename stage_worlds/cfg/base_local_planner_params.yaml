@@ -1,9 +1,9 @@
 
 planner_frequency: 1.0
+controller_frequency: 20.0
 base_local_planner: "dwa_local_planner/DWAPlannerROS"
 
 DWAPlannerROS:
-  controller_frequency: 20.0
 
   max_vel_x: 0.6
   min_vel_x: 0.0
@@ -11,17 +11,18 @@ DWAPlannerROS:
   min_vel_y: 0.0
 
   max_rot_vel: 1.57
-  min_rot_vel: -1.57
+  min_rot_vel: 0.05
     
-  acc_lim_th: 2.0
-  acc_lim_x: 2.0
+  acc_lim_th: 4.0
+  acc_lim_x: 4.0
   acc_lim_y: 0.0
 
-  xy_goal_tolerance: 0.05
+  xy_goal_tolerance: 0.1
 
   sim_time: 1.0
-  vx_samples: 10
+  vx_samples: 8
   vy_samples: 1
   vtheta_samples: 20
 
   occdist_scale: 1.0
+  path_distance_bias: 50.0
