@@ -31,6 +31,7 @@ class DeepMotionPlanner():
         self.send_motion_commands = True
         self.base_position = None
         self.base_orientation = None
+        self.max_laser_range = 10.0
 
         # Load various ROS parameters
         if not rospy.has_param('~model_path'):
@@ -57,7 +58,7 @@ class DeepMotionPlanner():
         joystick_sub = rospy.Subscriber('/joy', Joy, self.joystick_callback)
         self.cmd_pub  = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.deep_plan_pub = rospy.Publisher('/deep_planner/path', Path, queue_size=1)
-        self.relative_target_pub  = rospy.Publisher('/relative_target', PoseStamped, queue_size=1)
+        self.relative_target_pub  = rospy.Publisher('deep_planner/relative_target', PoseStamped, queue_size=1)
 
         # We over the same action api as the move base package
         self._as = actionlib.SimpleActionServer('deep_move_base', MoveBaseAction, auto_start = False)
@@ -124,7 +125,7 @@ class DeepMotionPlanner():
                 if not target:
                     continue
 
-                cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans)
+                cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans, max_range = 10.0)
                 
                 # Prepare the input vector, perform the inference on the model 
                 # and publish a new command
@@ -157,8 +158,8 @@ class DeepMotionPlanner():
         Check if the position and orientation are close enough to the target.
         If this is the case, set the current goal to succeeded.
         """
-        position_tolerance = 0.1
-        orientation_tolerance = 0.1
+        position_tolerance = 0.15
+        orientation_tolerance = 0.2
         if abs(target[0]) < position_tolerance \
                 and abs(target[1]) < position_tolerance \
                 and abs(target[2]) < orientation_tolerance:
@@ -278,7 +279,7 @@ class DeepMotionPlanner():
       start_time = rospy.get_rostime()
       final_time = start_time + sim_time
       path.header.stamp = start_time
-      path.header.frame_id = 'odom'
+      path.header.frame_id = 'map'
       p = PoseStamped()
       p.pose.position.x = self.base_position[0]
       p.pose.position.y = self.base_position[1]
