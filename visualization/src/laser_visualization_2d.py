@@ -51,7 +51,10 @@ class LaserVisualization2d():
   def relative_target_callback(self, data):
     x = data.pose.position.x
     y = data.pose.position.y
-    phi = data.pose.orientation.z
+    phi = tf.transformations.euler_from_quaternion([data.pose.orientation.x,
+                                                   data.pose.orientation.y,
+                                                   data.pose.orientation.z,
+                                                   data.pose.orientation.w])[2]
     self.relative_target = [x, y, phi]
     self.relative_target_update_time = rospy.Time.now()
     
