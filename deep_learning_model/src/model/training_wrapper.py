@@ -145,7 +145,7 @@ class TrainingWrapper():
             for step in range(self.args.max_steps):
                 start_time = time.time()
 
-                feed_dict = {keep_prob_placeholder: 0.5}
+                feed_dict = {keep_prob_placeholder: 0.75}
                 _, loss_value, loss_split_value, summary_str = self.sess.run([train_op, loss, loss_split, summary_op],
                         feed_dict=feed_dict)
 

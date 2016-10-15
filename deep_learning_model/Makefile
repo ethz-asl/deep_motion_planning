@@ -10,7 +10,7 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 # COMMANDS                                                                      #
 #################################################################################
 
-DATASET = combined
+DATASET = office_simple_borderless_filtered
 DATASET_EVAL = evaluation
 
 requirements:
@@ -22,7 +22,7 @@ data:
 train:
 	python src/model/train_model.py data/processed/$(DATASET).h5 \
 				 													data/processed/$(DATASET_EVAL).h5 \
-				 													-l 0.0001 -s 2000000 -b 128 --mail
+				 													-l 0.00001 -s 1000000 -b 128 --mail
 
 eval:
 	python src/model/predict_model.py -c reports/evaluation.csv data/processed/$(DATASET_EVAL).h5 \
