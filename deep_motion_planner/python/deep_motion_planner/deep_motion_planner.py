@@ -8,7 +8,7 @@ import math
 import copy
 
 # Messages
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, MultiArrayDimension
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped, Point, Quaternion
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
@@ -68,7 +68,7 @@ class DeepMotionPlanner():
         self.relative_target_pub  = rospy.Publisher('/relative_target', PoseStamped, queue_size=1)
         self.input_goal_pub = rospy.Publisher('/deep_planner/input/goal', Float32MultiArray, queue_size=1)
         self.input_laser_pub = rospy.Publisher('/deep_planner/input/laser', LaserScan, queue_size=1)
-
+        self.sensor_attention_pub = rospy.Publisher('/deep_planner/sensor_attention', Float32MultiArray, queue_size=1)
 
         # We over the same action api as the move base package
         self._as = actionlib.SimpleActionServer('deep_move_base', MoveBaseAction, auto_start = False)
@@ -109,7 +109,8 @@ class DeepMotionPlanner():
         runs until the interrupt_event is set
         """
         # Get a handle for the tensorflow interface
-        with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints) as tf_wrapper:
+        with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file,
+                use_checkpoints=self.use_checkpoints) as tf_wrapper:
             next_call = time.time()
             # Stop if the interrupt is requested
             while not self.interrupt_event.is_set():
@@ -171,7 +172,7 @@ class DeepMotionPlanner():
 
                 input_data = list(cropped_scans) + data.tolist()
 
-                linear_x, angular_z = tf_wrapper.inference(input_data)
+                linear_x, angular_z, attention = tf_wrapper.inference(input_data)
 
                 cmd = Twist()
                 cmd.linear.x = linear_x
@@ -182,6 +183,8 @@ class DeepMotionPlanner():
 
                 # Check if the goal pose is reached
                 self.check_goal_reached(target)
+
+                self.publish_attention(attention)
 
     def check_goal_reached(self, target):
         """
@@ -339,3 +342,23 @@ class DeepMotionPlanner():
         path.poses.append(new_pose)
         
       self.deep_plan_pub.publish(path)
+
+    def publish_attention(self, attention):
+        msg = Float32MultiArray()
+
+        msg.layout.data_offset = 0
+        dim = MultiArrayDimension()
+        dim.label = 'features'
+        dim.size = attention.shape[0]
+        dim.stride = attention.shape[0]*attention.shape[1]
+        msg.layout.dim.append(dim)
+        dim = MultiArrayDimension()
+        dim.label = 'area'
+        dim.size = attention.shape[1]
+        dim.stride = attention.shape[1]
+        msg.layout.dim.append(dim)
+
+        msg.data = attention.flatten()
+
+        self.sensor_attention_pub.publish(msg)
+

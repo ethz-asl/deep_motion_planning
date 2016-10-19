@@ -24,6 +24,7 @@ class TensorflowWrapper():
         @type  :  bool
         
         """ 
+
         # Load the graph definition from a binary protobuf file
         with gfile.FastGFile(os.path.join(storage_path, protobuf_file),'rb') as f:
             graph_def = tf.GraphDef()
@@ -55,13 +56,48 @@ class TensorflowWrapper():
         # Make sure to close the session and clena up all the used resources
         self.sess.close()
 
+    def process_attention(self, alpha):
+
+        a_sensor = np.reshape(alpha[:,:-3], [alpha[:,:-3].shape[1]/64, 64]).transpose()
+
+        return a_sensor
+
+    def process_activation(self, activation):
+
+        activation = activation.squeeze().transpose()
+
+        return activation
+
     def inference(self, data):
         """
         Take the given data and perform the model inference on it
         """
-        feed_dict = {'data_input:0': [data]}
+        feed_dict = {'data_input:0': [data], 'keep_prob_placeholder:0': 1.0}
 
-        prediction = self.sess.run(['model_inference:0'], feed_dict=feed_dict)[0]
+        mode = 0
+        if mode == 0:
+            # Return Attention matrix
+            prediction, alpha = self.sess.run(['model_inference:0', 
+                'Softmax_2:0'], feed_dict=feed_dict)
 
-        return (prediction[0,0], prediction[0,1])
+            cnn_data = self.process_attention(alpha)
+        
+        elif mode == 1:
+            # Return activation matrix
+            prediction, act = self.sess.run(['model_inference:0', 
+                'AvgPool2D_2/AvgPool:0'], feed_dict=feed_dict)
+
+            cnn_data = self.process_activation(act)
+
+        elif mode == 2:
+            # Only process the command
+            prediction = self.sess.run(['model_inference:0'], feed_dict=feed_dict)[0]
+
+            cnn_data = np.zeros([64,45])
+
+        else:
+            print('Unsupported mode: {}'.format(mode))
+        
+
+        return (prediction[0,0], prediction[0,1], cnn_data)
 
