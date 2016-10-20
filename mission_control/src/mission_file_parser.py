@@ -28,8 +28,8 @@ class MissionFileParser():
                 l = l.strip() # Remove whitespaces
 
                 # First character is a #
-                # Do not parse comments
-                if l[0] == '#':
+                # Do not parse empty lines or comments
+                if len(l) == 0 or l[0] == '#':
                     continue
 
                 parsed = self.__parse_line__(l)
