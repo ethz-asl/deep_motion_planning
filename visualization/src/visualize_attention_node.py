@@ -41,7 +41,7 @@ class AttentionHandler():
         att = np.array(sensor_attention.data)
         att = np.reshape(att, [sensor_attention.layout.dim[0].size,sensor_attention.layout.dim[1].size])
 
-        self.vis.set_sensor_attention(np.fliplr(att))
+        self.vis.set_sensor_attention(att)
 
     def __enter__(self):
         return self

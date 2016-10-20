@@ -19,6 +19,7 @@ class VisualizeAttention():
         self.n_feature = 40                 # Number of features (columns)
         self.n_filter = 64                  # Number of filters (rows)
         self.graph_update_period = 1.0/5.0  # Redraw the plots with this period
+        self.attention_scale_max = 0.03     # Maximum value for the ploted range
         self.plot_attention_matrix = False  # Select to show the map or the matrix
 
         # Data captures for threading
@@ -98,7 +99,11 @@ class VisualizeAttention():
     def set_sensor_attention(self, attention):
         if attention.shape[0] != self.n_filter or attention.shape[1] != self.n_feature:
             print('Adjust the plotting size: {}*{}'.format(attention.shape[0], attention.shape[1]))
-        self.sensor_attention_data = attention
+
+        if self.plot_attention_matrix:
+            self.sensor_attention_data = np.fliplr(attention)
+        else:
+            self.sensor_attention_data = attention
 
     def create_plot(self):
 
@@ -110,7 +115,7 @@ class VisualizeAttention():
     def create_map_plot(self):
         """Create a plot which includes the laser scan with weights and the target pose"""
 
-        self.mapper = LinearColorMapper(palette=brewer['YlOrRd'][9], low=0.03, high=0.0)
+        self.mapper = LinearColorMapper(palette=brewer['YlOrRd'][9], low=self.attention_scale_max, high=0.0)
         
         # Plot laser data and target into a map
         two_seventy = np.pi*135.0/180.0
@@ -141,8 +146,7 @@ class VisualizeAttention():
     def crete_matrix_plot(self):
         """Create a plot which includes a matrx of attention and its combination as bar charts"""
 
-        attention_scale_max = 3.5
-        self.mapper = LinearColorMapper(palette=brewer['YlOrRd'][9], low=attention_scale_max, high=0.0)
+        self.mapper = LinearColorMapper(palette=brewer['YlOrRd'][9], low=self.attention_scale_max, high=0.0)
 
         # Plot the attention matrix
         x_index_matrix = np.arange(self.n_feature).reshape([self.n_feature,1]).repeat(self.n_filter, axis=1)
@@ -166,12 +170,12 @@ class VisualizeAttention():
                 ]
 
         # Plot combined values of the filters
-        self.filter_bars = bkp.figure(y_range=(-1,self.n_filter),x_range=(0.0,attention_scale_max), width=250)
+        self.filter_bars = bkp.figure(y_range=(-1,self.n_filter),x_range=(0.0,self.attention_scale_max), width=250)
         self.sensor_attention_filters = self.filter_bars.hbar(y=np.arange(0,self.n_filter),
                 height=1,left=0,right=np.sum(self.sensor_attention_data, axis=1), color='firebrick')
 
         # Plot combined values of the features
-        self.feature_bars = bkp.figure(x_range=(-1,self.n_feature), y_range=(0.0,attention_scale_max), height=250)
+        self.feature_bars = bkp.figure(x_range=(-1,self.n_feature), y_range=(0.0,self.attention_scale_max), height=250)
         self.sensor_attention_features = self.feature_bars.vbar(x=np.arange(0,self.n_feature),
                 width=1,bottom=0,top=np.sum(self.sensor_attention_data, axis=0), color='firebrick')
 
