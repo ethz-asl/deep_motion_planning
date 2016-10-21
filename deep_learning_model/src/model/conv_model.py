@@ -6,8 +6,7 @@ in the training script
 import logging
 
 import tensorflow as tf
-from tensorflow.contrib.layers import batch_norm, fully_connected, conv2d, xavier_initializer_conv2d, xavier_initializer, l1_regularizer
-import tensorflow.contrib as contrib
+import tensorflow.contrib.slim as slim
 
 # Give the model a descriptive name
 NAME = 'convolutional'
@@ -29,8 +28,27 @@ def learning_rate(initial):
 
 def __get_variable__(index, input_size, output_size):
         return (tf.get_variable('weights_hidden{}'.format(index), shape=[input_size, output_size],
-                        initializer=tf.contrib.layers.xavier_initializer()),
+                        initializer=slim.xavier_initializer()),
                         tf.get_variable('biases_hidden{}'.format(index), [output_size]))
+
+def res_block(x, scope_number, reuse, training):
+    """
+    Add a residual block (with new design) to the Tensorflow graph
+    """
+    with tf.name_scope('residual_block_{}'.format(scope_number)) as scope:
+        net = tf.nn.relu(slim.batch_norm(x, is_training=True, reuse=reuse,
+                scope='resnet_batch_{}_1'.format(scope_number)))
+        net = slim.conv2d(net, 64, [1,3], stride=1, activation_fn=None,
+                weights_initializer=slim.xavier_initializer_conv2d(), 
+                weights_regularizer=slim.l2_regularizer(0.001),
+                reuse=reuse, trainable=training, scope='residual_block_{}_1'.format(scope_number))
+        net = tf.nn.relu(slim.batch_norm(net, is_training=True, reuse=reuse,
+            scope='residual_block_{}_2'.format(scope_number)))
+        net = slim.conv2d(net, 64, [1,3], stride=1, activation_fn=None,
+                weights_initializer=slim.xavier_initializer_conv2d(), 
+                weights_regularizer=slim.l2_regularizer(0.001),
+                reuse=reuse, trainable=training, scope='residual_block_{}_2'.format(scope_number))
+    return tf.add(x,net)
 
 def inference(data, keep_prob, sample_size, training=True, reuse=False, output_name='prediction'):
     """
@@ -42,53 +60,40 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, output_n
     goal = tf.slice(data, [0,1080], [sample_size,3])
 
     laser = tf.reshape(laser, [sample_size, 1, 1080, 1])
-    hidden_0 = conv2d(laser, 64, [1,5], stride=1, normalizer_fn=batch_norm,
-            weights_initializer=xavier_initializer_conv2d(), 
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_0')
-    hidden_0 = contrib.layers.max_pool2d(hidden_0, [1,2],[1,2], 'SAME')
-    hidden_1 = conv2d(hidden_0, 64, [1,5], stride=1, normalizer_fn=batch_norm,
-            weights_initializer=xavier_initializer_conv2d(), 
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_1')
-    hidden_1 = contrib.layers.max_pool2d(hidden_1, [1,2],[1,2], 'SAME')
-    hidden_2 = conv2d(hidden_1, 64, [1,3], normalizer_fn=batch_norm,
-            weights_initializer=xavier_initializer_conv2d(),
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_2')
-    hidden_3 = conv2d(hidden_2, 64, [1,3], activation_fn=None, normalizer_fn=batch_norm,
-            weights_initializer=xavier_initializer_conv2d(), 
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_3')
-    hidden_3 = tf.nn.relu(hidden_3 + hidden_1)
-    hidden_3 = contrib.layers.max_pool2d(hidden_3, [1,2],[1,2], 'SAME')
-    hidden_4 = conv2d(hidden_3, 64, [1,3], normalizer_fn=batch_norm,
-            weights_initializer=xavier_initializer_conv2d(),
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_4')
-    hidden_5 = conv2d(hidden_4, 64, [1,3], activation_fn=None, normalizer_fn=batch_norm,
-            weights_initializer=xavier_initializer_conv2d(), 
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_5')
-    hidden_5 = tf.nn.relu(hidden_5 + hidden_3)
+    net = slim.conv2d(laser, 64, [1,3], stride=1, normalizer_fn=None,
+            weights_initializer=slim.xavier_initializer_conv2d(), 
+            weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_1')
+    net = slim.max_pool2d(net, [1,3],[1,3], 'SAME')
+    net = slim.conv2d(net, 64, [1,3], stride=1, normalizer_fn=None, activation_fn=None,
+            weights_initializer=slim.xavier_initializer_conv2d(), 
+            weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_2')
+    net = slim.max_pool2d(net, [1,3],[1,3], 'SAME')
+    
+    net = res_block(net, 3, reuse=reuse, training=training)
+    net = res_block(net, 4, reuse=reuse, training=training)
 
-    pooling = contrib.layers.avg_pool2d(hidden_5, [1,3],[1,3], 'SAME')
-    pooling = contrib.layers.flatten(tf.nn.dropout(pooling, keep_prob))
+    pooling = slim.avg_pool2d(net, [1,3],[1,3], 'SAME')
+    pooling = slim.flatten(tf.nn.dropout(pooling, keep_prob))
     combined = tf.concat(1,[pooling, goal])
 
     # Attention
-    att_1 = fully_connected(combined, 2048, weights_initializer=xavier_initializer(),
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='att_scope_1')
-    att_2 = fully_connected(att_1, 2048, weights_initializer=xavier_initializer(),
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='att_scope_2')
-    att_2 = tf.nn.dropout(att_2, keep_prob)
-    alpha = fully_connected(att_2, 2880, activation_fn=None, reuse=reuse, trainable=training, scope='alpha_scope')
+    att = slim.fully_connected(att, 2560, weights_initializer=slim.xavier_initializer(),
+            weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='att_scope_2')
+    att = tf.nn.dropout(att, keep_prob)
+    alpha = slim.fully_connected(att, 2560, activation_fn=None, reuse=reuse, trainable=training,
+            scope='alpha_scope')
     alpha = tf.nn.softmax(alpha)
 
-    weighted_pooling = tf.mul(pooling, alpha)
-    weighted_combined = tf.concat(1, [weighted_pooling, goal])
+    weighted_sensor = tf.mul(pooling, alpha)
+    combined = tf.concat(1,[weighted_sensor, goal])
 
-    fc_5 = fully_connected(weighted_combined, 1024, weights_initializer=xavier_initializer(),
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_5')
-    fc_6 = fully_connected(fc_5, 1024, weights_initializer=xavier_initializer(),
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_6')
-    fc_7 = fully_connected(fc_6, 1024, weights_initializer=xavier_initializer(),
-            weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_7')
-    prediction = fully_connected(fc_7, CMD_SIZE, activation_fn=None, reuse=reuse, trainable=training, scope='layer_scope_pred')
+    net = slim.fully_connected(combined, 1024, weights_initializer=slim.xavier_initializer(),
+            weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_5')
+    net = slim.fully_connected(net, 1024, weights_initializer=slim.xavier_initializer(),
+            weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_6')
+    net = slim.fully_connected(net, 1024, weights_initializer=slim.xavier_initializer(),
+            weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_7')
+    prediction = slim.fully_connected(net, CMD_SIZE, activation_fn=None, reuse=reuse, trainable=training, scope='layer_scope_pred')
 
     prediction = tf.identity(prediction, name=output_name)
 

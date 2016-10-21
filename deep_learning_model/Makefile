@@ -22,7 +22,7 @@ data:
 train:
 	python src/model/train_model.py data/processed/$(DATASET).h5 \
 				 													data/processed/$(DATASET_EVAL).h5 \
-				 													-l 0.00001 -s 1000000 -b 128 --mail
+				 													-l 0.00001 -s 500000 -b 128 --mail
 
 eval:
 	python src/model/predict_model.py -c reports/evaluation.csv data/processed/$(DATASET_EVAL).h5 \

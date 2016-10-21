@@ -58,7 +58,7 @@ class TensorflowWrapper():
 
     def process_attention(self, alpha):
 
-        a_sensor = np.reshape(alpha[:,:-3], [alpha[:,:-3].shape[1]/64, 64]).transpose()
+        a_sensor = np.reshape(alpha, [alpha.shape[1]/64, 64]).transpose()
 
         return a_sensor
 
