@@ -26,14 +26,17 @@ def compute_relative_cost_deep(cost_deep, cost_ros):
   else:
     return cost_deep
 
-def plot_trajectory_comparison(ax, deep_missions, ros_missions, grid, colors=['g', 'k'], show_labels=False):
+def plot_trajectory_comparison(ax, deep_missions, ros_missions, grid, colors=['g', 'k'], show_labels=False, shift_directions=None):
   pl.imshow(grid, extent=[-5, 5, -5, 5], origin='lower', cmap='Greys')
   for idx, m in enumerate(deep_missions):
-    dh = pc_util.plot_mission(ax, m, idx+1, color=colors[0], plot_numbers=True)
+    if shift_directions:
+      dh = pc_util.plot_mission(ax, m, idx+1, color=colors[0], plot_numbers=True, shift_direction=shift_directions[idx], shift_dist=0.7)
+    else:
+      dh = pc_util.plot_mission(ax, m, idx+1, color=colors[0], plot_numbers=True)
   for idx, m in enumerate(ros_missions):
     rh = pc_util.plot_mission(ax, m, idx+1, color=colors[1], plot_numbers=False)
   if show_labels:
-    pl.legend((dh[0], rh[0]), ('Deep', 'ROS'), fancybox=True, framealpha=0.5)
+    pl.legend((dh[0], rh[0]), ('CNN', 'ROS'), fancybox=True, framealpha=0.5)
     
 def plot_relative_error(ax, deep_missions, ros_missions, colors=['g', 'k'], show_labels=False):
   cost_deep = pc_util.compute_detailed_cost_sum(deep_missions)
@@ -44,7 +47,7 @@ def plot_relative_error(ax, deep_missions, ros_missions, colors=['g', 'k'], show
   pc_util.plot_relative_error_bars(ax, cost_rel, colors=colors, bar_width=0.3)
   h = []
   if show_labels:
-    h.append(ax.plot([],color=colors[0], lw=7, label='Deep'))
+    h.append(ax.plot([],color=colors[0], lw=7, label='CNN'))
     h.append(ax.plot([],color=colors[1], lw=7, label='ROS'))
   return h
   
@@ -54,7 +57,7 @@ fig_width_pt = 245.71811                # Get this from LaTeX using \showthe\col
 inches_per_pt = 1.0/72.27               # Convert pt to inch
 # golden_mean = (np.sqrt(5)-1.0)/2.0    # Aesthetic ratio
 fig_width = fig_width_pt*inches_per_pt  # width in inches
-fig_height = fig_width*0.9      # height in inches
+fig_height = fig_width*0.8      # height in inches
 fig_size =  [fig_width,fig_height]
 fontsize = 9
 params = {'backend': 'ps',
@@ -64,7 +67,7 @@ params = {'backend': 'ps',
           'legend.fontsize': fontsize,
           'xtick.labelsize': fontsize,
           'ytick.labelsize': fontsize,
-          'text.usetex': False,
+          'text.usetex': True,
           'font.family': 'serif',
           'font.serif': 'Computer Modern Roman',
           'figure.figsize': fig_size}
@@ -102,7 +105,8 @@ if two_maps:
   ax = pl.subplot2grid((5,2), (0,0), rowspan=3)
 else:
   ax = pl.subplot2grid((5,1), (0,0), rowspan=3)
-plot_trajectory_comparison(ax, planner_missions1[0], planner_missions1[1], grid1, colors=['g', 'k'], show_labels=False)
+shift_directions=['lu', 'rd', 'r', 'r', 'u', 'rd', 'u', 'r']  
+plot_trajectory_comparison(ax, planner_missions1[0], planner_missions1[1], grid1, colors=['g', 'k'], show_labels=False, shift_directions=shift_directions)
 ax.get_xaxis().set_ticks([])
 ax.get_yaxis().set_ticks([])
 
@@ -113,11 +117,16 @@ else:
 plot_relative_error(ax, planner_missions1[0], planner_missions1[1], colors=['g', 'k'], show_labels=True)
 ax.legend(loc='best', fancybox = True, framealpha = 0.5)
 ax.yaxis.set_major_locator(ticker.MultipleLocator(30))
+ax.set_ylabel('\%', fontsize=6)
+for tick in ax.yaxis.get_major_ticks():
+  tick.label.set_fontsize(6) 
+ax.set_ylim(-40, 160)
 ax.yaxis.grid()
 
 if two_maps:
   ax = pl.ax = pl.subplot2grid((5,2), (0,1), rowspan=3)
-  plot_trajectory_comparison(ax, planner_missions2[0], planner_missions2[1], grid2, colors=['g', 'k'], show_labels=False)
+  shift_directions=['r', 'u', 'r', 'u', 'ru', 'u', 'r', 'u']
+  plot_trajectory_comparison(ax, planner_missions2[0], planner_missions2[1], grid2, colors=['g', 'k'], show_labels=False, shift_directions=shift_directions)
   ax.get_xaxis().set_ticks([])
   ax.get_yaxis().set_ticks([])
 
@@ -125,6 +134,10 @@ if two_maps:
   plot_relative_error(ax, planner_missions2[0], planner_missions2[1], colors=['g', 'k'], show_labels=False)
   ax.legend(loc='best', fancybox = True, framealpha = 0.5)
   ax.yaxis.set_major_locator(ticker.MultipleLocator(30))
+  ax.set_ylim(-40, 160)
+  ax.set_ylabel('\%', fontsize=6)
+  for tick in ax.yaxis.get_major_ticks():
+    tick.label.set_fontsize(6) 
   ax.yaxis.grid()
 
 

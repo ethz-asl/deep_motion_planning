@@ -49,17 +49,17 @@ pl.rc('text', usetex=True)
 pl.rc('font', family='serif')
  
 data_path = rospkg.RosPack().get_path('planner_comparison') + "/data/"
-names = ['Deep', 'Ros']
+names = ['CNN\_bigFC', 'ROS']
 
-paths_comparison = ['/data/rosbags/deep_motion_planning/turtle/SO_smallFC_2M.bag',
+paths_comparison = ['/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_updated_targets.bag',
                     '/data/rosbags/deep_motion_planning/turtle/ros_planner.bag']
 
-# paths_background = ['/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_2nd_run.bag',
-#                     '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_3rd_run.bag',
-#                     '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_4th_run.bag',
-#                     '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_5th_run.bag',
-#                     '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_6th_run.bag']
-paths_background = []
+# paths_background = []
+paths_background = ['/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_2nd_run.bag',
+                    '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_3rd_run.bag',
+                    '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_4th_run.bag',
+                    '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_5th_run.bag',
+                    '/data/rosbags/deep_motion_planning/turtle/deep_SO_4M_6th_run.bag']
 
 planner_missions = []
 planner_missions_background = []
@@ -74,7 +74,9 @@ for idx, path in enumerate(paths_background):
   rosbag_if = RosbagInterface(path)
   missions = extract_missions(rosbag_if.msg_container)
   planner_missions_background.append(missions)
-  
+
+
+shift_numbers = ['rd', 'r', 'u', 'l', 'u', 'u', 'u', 'r', 'u', 'rd', 'u', 'u', 'r']
 colors = ['g', 'k']
 manual_offset_x = 0.25
 manual_offset_y = 0.25
@@ -94,7 +96,7 @@ for missions in planner_missions_background:
 for ii, missions in enumerate(planner_missions):
   for jj, m in enumerate(missions):
     plot_numbers = True if ii is 0 else False
-    th = pc_util.plot_mission(ax, m, jj+1, color=colors[ii], plot_numbers=plot_numbers)
+    th = pc_util.plot_mission(ax, m, jj+1, color=colors[ii], plot_numbers=plot_numbers, shift_direction=shift_numbers[jj], shift_dist=0.7)
     if ii == 0:
       jh = pc_util.plot_joystick_interference(ax, m, color='m', alpha=1.0, linewidth=1.0)
       if len(jh) > 0:
@@ -124,8 +126,8 @@ for miss in fused_missions:
 
 autonomous_ratio = 100 * (1 - joy_dist / abs_dist)
 
-# if save_figures:
-#   print('Saving figure.')
-#   pl.savefig(os.path.join(figure_path, 'comparison_real_robot.pdf'))
+if save_figures:
+  print('Saving figure.')
+  pl.savefig(os.path.join(figure_path, 'comparison_real_robot.pdf'))
 
 pl.show(block=False)

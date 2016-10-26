@@ -53,7 +53,7 @@ def plot_joystick_interference(ax, mission, color='r', alpha=1.0, linewidth=1.0 
   return th
   
   
-def plot_mission(ax, mission, id=None, color='b', plot_numbers=False, plot_joystick=False, fontsize=9, alpha=1.0, linewidth=1.0):
+def plot_mission(ax, mission, id=None, color='b', plot_numbers=False, plot_joystick=False, fontsize=9, alpha=1.0, linewidth=1.0, shift_direction=None, shift_dist=0.2):
   traj = mission.get_trajectory()
   
   try:
@@ -65,8 +65,14 @@ def plot_mission(ax, mission, id=None, color='b', plot_numbers=False, plot_joyst
   if id==0 and plot_numbers:
     ax.plot(traj[0,0], traj[1,0], marker='o', mfc='r', mec='r')
   if plot_numbers:
+    shift_dist = shift_dist
+    shift_dict = {'l': (-shift_dist, 0), 'r': (shift_dist, 0), 'u':(0, shift_dist), 'd':(0, -shift_dist), 0:(0,0), 
+                  'ld': (-shift_dist, -shift_dist), 'lu':(-shift_dist, shift_dist), 'rd':(shift_dist, -shift_dist), 'ru':(shift_dist, shift_dist)}
+    shift_position = (0, 0)
+    if shift_direction:
+      shift_position = shift_dict[shift_direction]
     if id is not None:
-      ax.text(traj[0,-1], traj[1,-1], str(id), color='k', fontsize=fontsize)
+      ax.text(traj[0,-1] + shift_position[0], traj[1,-1] + shift_position[1], str(id), color='r', fontsize=fontsize)
   return th
   
 def plot_error_bars(ax, cost, color='b', shift=0.0, bar_width=0.2):
@@ -83,10 +89,9 @@ def plot_relative_error_bars(ax, rel_cost, colors=['g', 'k'], bar_width=0.2):
     bar = ax.bar(idx+1, 100*rel_cost[key], width=bar_width, color=color, align='center')
     bars.append(bar)
     ax.plot([-100, 100], [0, 0], color='k')
-    ax.set_ylabel('%')
     ax.set_xlim(0, len(rel_cost)+1)
     x_tick_pos = np.arange(len(rel_cost)) + 1
-    pl.xticks(x_tick_pos, rel_cost.keys(), rotation=25, fontsize=9)
+    pl.xticks(x_tick_pos, rel_cost.keys(), rotation=35, fontsize=7)
   return bars
 
 def get_complete_missions(missions):

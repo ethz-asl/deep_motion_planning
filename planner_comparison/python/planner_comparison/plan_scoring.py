@@ -116,10 +116,10 @@ class Mission():
   def compute_cost(self):
     feature_list = [self.normalized_rotational_energy, 
                     self.normalized_translational_energy, 
-                    self.obstacle_closeness, 
                     self.final_goal_dist, 
-                    self.inverse_avg_speed]
-    feature_names = ['rot_en.', 'trans_en.', 'd_obj', 'd_goal', 'speed']
+                    self.distance,
+                    self.duration]
+    feature_names = ['$E_{rot}$', '$E_{trans}$', '$d_{goal}$', '$dist$', '$time$']
     feature_weights = [1.0, 1.0, 1.0, 1.0, 1.0]
     
     cost = 0.0
