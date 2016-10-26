@@ -93,12 +93,12 @@ for bp in bps_rot:
 ax.set_xlim(0, len(names)+1)
 ax.set_ylabel('[m/s] / [rad/s]')
 x_tick_pos = np.arange(len(names)) + 1
-pl.xticks(x_tick_pos, names, rotation=25, fontsize=fontsize)
+pl.xticks(x_tick_pos, names, rotation=0, fontsize=fontsize)
 h = []
 h.append(ax.plot([],color='r', lw=7, label='trans. error'))
 h.append(ax.plot([],color='b', lw=7, label='rot. error'))
 ax.legend(loc='upper left', fancybox = True, framealpha = 0.5)
-pl.subplots_adjust(left=0.17, right=0.95, top=0.92, bottom=0.2)
+pl.subplots_adjust(left=0.17, right=0.95, top=0.92, bottom=0.3)
 
 print('Saving figure.')
 pl.savefig(os.path.join(figure_path, 'error_boxplots.pdf'))

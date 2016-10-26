@@ -33,6 +33,7 @@ class DeepMotionPlanner():
         self.send_motion_commands = True
         self.base_position = None
         self.base_orientation = None
+        self.max_laser_range = 10.0
 
         # Load various ROS parameters
         if not rospy.has_param('~model_path'):
@@ -136,7 +137,7 @@ class DeepMotionPlanner():
                 scan_msg = copy.copy(self.last_scan)
                 self.scan_lock.release()
 
-                cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans)
+                cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans, max_range = 10.0)
 
                 if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
                     rospy.logerr('Scan contained invalid float (nan or inf)')
@@ -308,7 +309,7 @@ class DeepMotionPlanner():
       start_time = rospy.get_rostime()
       final_time = start_time + sim_time
       path.header.stamp = start_time
-      path.header.frame_id = 'odom'
+      path.header.frame_id = 'map'
       p = PoseStamped()
       p.pose.position.x = self.base_position[0]
       p.pose.position.y = self.base_position[1]
