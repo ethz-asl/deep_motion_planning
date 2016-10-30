@@ -71,13 +71,14 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, output_n
     
     net = res_block(net, 3, reuse=reuse, training=training)
     net = res_block(net, 4, reuse=reuse, training=training)
+    net = res_block(net, 5, reuse=reuse, training=training)
 
     pooling = slim.avg_pool2d(net, [1,3],[1,3], 'SAME')
     pooling = slim.flatten(tf.nn.dropout(pooling, keep_prob))
     combined = tf.concat(1,[pooling, goal])
 
     # Attention
-    att = slim.fully_connected(att, 2560, weights_initializer=slim.xavier_initializer(),
+    att = slim.fully_connected(combined, 2560, weights_initializer=slim.xavier_initializer(),
             weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='att_scope_2')
     att = tf.nn.dropout(att, keep_prob)
     alpha = slim.fully_connected(att, 2560, activation_fn=None, reuse=reuse, trainable=training,
@@ -87,12 +88,11 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, output_n
     weighted_sensor = tf.mul(pooling, alpha)
     combined = tf.concat(1,[weighted_sensor, goal])
 
-    net = slim.fully_connected(combined, 1024, weights_initializer=slim.xavier_initializer(),
+    net = slim.fully_connected(combined, 2048, weights_initializer=slim.xavier_initializer(),
             weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_5')
-    net = slim.fully_connected(net, 1024, weights_initializer=slim.xavier_initializer(),
+    net = tf.nn.dropout(net, keep_prob)
+    net = slim.fully_connected(net, 2048, weights_initializer=slim.xavier_initializer(),
             weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_6')
-    net = slim.fully_connected(net, 1024, weights_initializer=slim.xavier_initializer(),
-            weights_regularizer=slim.l2_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_7')
     prediction = slim.fully_connected(net, CMD_SIZE, activation_fn=None, reuse=reuse, trainable=training, scope='layer_scope_pred')
 
     prediction = tf.identity(prediction, name=output_name)
