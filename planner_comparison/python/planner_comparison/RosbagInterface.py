@@ -10,7 +10,7 @@ from move_base_msgs.msg import MoveBaseActionFeedback
 from std_msgs.msg import Empty
 from actionlib_msgs.msg import GoalStatus
 
-from time_msg_container import *
+from TimeMsgContainer import *
 
 class RosbagInterface():
   

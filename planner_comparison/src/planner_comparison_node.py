@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
 import rospy
-from planner_comparison import PlannerComparison
+from planner_comparison.PlannerComparison import PlannerComparison
 
 def main():
 

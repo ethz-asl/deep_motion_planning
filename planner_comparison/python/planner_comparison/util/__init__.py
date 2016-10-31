@@ -25,7 +25,7 @@ def joystick_trigger_times(mission):
 def find_next_joystick_release_time(trigger_time, mission):
   start_idx = bisect(mission.joy_msgs.times, trigger_time)
   for idx in range(start_idx, len(mission.joy_msgs)-1):
-    if mission.joy_msgs.msgs[idx+1].buttons[4] == 1 and mission.joy_msgs.msgs[idx+1].buttons[4] == 0:
+    if mission.joy_msgs.msgs[idx].buttons[4] == 1 and mission.joy_msgs.msgs[idx+1].buttons[4] == 0:
       return mission.joy_msgs.times[idx]
   return mission.joy_msgs.times[-1]
 
@@ -66,13 +66,17 @@ def plot_mission(ax, mission, id=None, color='b', plot_numbers=False, plot_joyst
     ax.plot(traj[0,0], traj[1,0], marker='o', mfc='r', mec='r')
   if plot_numbers:
     shift_dist = shift_dist
-    shift_dict = {'l': (-shift_dist, 0), 'r': (shift_dist, 0), 'u':(0, shift_dist), 'd':(0, -shift_dist), 0:(0,0), 
-                  'ld': (-shift_dist, -shift_dist), 'lu':(-shift_dist, shift_dist), 'rd':(shift_dist, -shift_dist), 'ru':(shift_dist, shift_dist)}
+    ang = 0.7071
+    shift_dict = {'l':  (-shift_dist, 0),            'r': (shift_dist, 0), 
+                  'u':  (0, shift_dist),             'd': (0, -shift_dist), 0:(0,0), 
+                'ld': (-shift_dist*ang, -shift_dist*ang), 'lu': (-shift_dist*ang, shift_dist*ang), 
+                'rd': (shift_dist*ang, -shift_dist*ang),  'ru': (shift_dist*ang, shift_dist*ang)}
     shift_position = (0, 0)
     if shift_direction:
       shift_position = shift_dict[shift_direction]
     if id is not None:
-      ax.text(traj[0,-1] + shift_position[0], traj[1,-1] + shift_position[1], str(id), color='r', fontsize=fontsize)
+      ax.text(traj[0,-1] + shift_position[0], traj[1,-1] + shift_position[1], str(id), color='r',
+              fontsize=fontsize, ha='center', va='center')
   return th
   
 def plot_error_bars(ax, cost, color='b', shift=0.0, bar_width=0.2):

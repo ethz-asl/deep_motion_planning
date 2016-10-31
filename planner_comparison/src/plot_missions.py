@@ -62,8 +62,8 @@ fig_size =  [fig_width,fig_height]
 fontsize = 9
 params = {'backend': 'ps',
           'axes.labelsize': fontsize,
-          'text.fontsize': fontsize,
-          'title.fontsize': fontsize,
+          'font.size': fontsize,
+          'axes.titlesize': fontsize,
           'legend.fontsize': fontsize,
           'xtick.labelsize': fontsize,
           'ytick.labelsize': fontsize,

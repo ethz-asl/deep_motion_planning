@@ -21,19 +21,21 @@ def parse_args():
 
 
 save_figures = True
-figure_path = '/home/pfmark/jade_catkin_ws/src/deep_motion_planning/planner_comparison/data/figures/'
+file_path = os.path.dirname(os.path.realpath(__file__))
+figure_path = os.path.join(file_path, '..', 'data')
+#figure_path = '/home/pfmark/jade_catkin_ws/src/deep_motion_planning/planner_comparison/data/figures/'
 
 fig_width_pt = 245.71811                # Get this from LaTeX using \showthe\columnwidth
 inches_per_pt = 1.0/72.27               # Convert pt to inch
 # golden_mean = (np.sqrt(5)-1.0)/2.0    # Aesthetic ratio
-fig_width = fig_width_pt*inches_per_pt  # width in inches
-fig_height = fig_width*0.8      # height in inches
+fig_width = 5  # width in inches
+fig_height = fig_width*1.0      # height in inches
 fig_size =  [fig_width,fig_height]
 fontsize = 9
 params = {'backend': 'ps',
           'axes.labelsize': fontsize,
-          'text.fontsize': fontsize,
-          'title.fontsize': fontsize,
+          'font.size': fontsize,
+          'axes.titlesize': fontsize,
           'legend.fontsize': fontsize,
           'xtick.labelsize': fontsize,
           'ytick.labelsize': fontsize,
@@ -125,6 +127,7 @@ for miss in fused_missions:
     joy_dist[ii] += pc_util.compute_joystick_distance(m)
 
 autonomous_ratio = 100 * (1 - joy_dist / abs_dist)
+print('Autonomous ratio: {}'.format(autonomous_ratio))
 
 if save_figures:
   print('Saving figure.')

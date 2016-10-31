@@ -21,7 +21,9 @@ def parse_args():
 
 
 save_figures = True
-figure_path = '/home/pfmark/jade_catkin_ws/src/deep_motion_planning/planner_comparison/data/figures/'
+#figure_path = '/home/pfmark/jade_catkin_ws/src/deep_motion_planning/planner_comparison/data/figures/'
+file_path = os.path.dirname(os.path.realpath(__file__))
+figure_path = os.path.join(file_path, '..', 'data')
 
 fig_width_pt = 245.71811                # Get this from LaTeX using \showthe\columnwidth
 inches_per_pt = 1.0/72.27               # Convert pt to inch
@@ -32,8 +34,8 @@ fig_size =  [fig_width,fig_height]
 fontsize = 9
 params = {'backend': 'ps',
           'axes.labelsize': fontsize,
-          'text.fontsize': fontsize,
-          'title.fontsize': fontsize,
+          'font.size': fontsize,
+          'axes.titlesize': fontsize,
           'legend.fontsize': fontsize,
           'xtick.labelsize': fontsize,
           'ytick.labelsize': fontsize,
