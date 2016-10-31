@@ -49,6 +49,17 @@ class TensorflowWrapper():
             else:
                 print('No checkpoint files in folder: {}'.format(storage_path))
 
+        found_keep_prob = False
+        for o in self.sess.graph.get_operations():
+            if 'keep_prob_placeholder' in o.name:
+                found_keep_prob = True
+                break
+
+        if found_keep_prob:
+            self.feed_dict = {'keep_prob_placeholder:0': 1.0}
+        else:
+            self.feed_dict = dict()
+
     def __enter__(self):
         return self
 
@@ -72,26 +83,26 @@ class TensorflowWrapper():
         """
         Take the given data and perform the model inference on it
         """
-        feed_dict = {'data_input:0': [data], 'keep_prob_placeholder:0': 1.0}
+        self.feed_dict['data_input:0'] = [data]
 
         mode = 0
         if mode == 0:
             # Return Attention matrix
             prediction, alpha = self.sess.run(['model_inference:0', 
-                'Softmax_2:0'], feed_dict=feed_dict)
+                'Softmax_2:0'], feed_dict=self.feed_dict)
 
             cnn_data = self.process_attention(alpha)
         
         elif mode == 1:
             # Return activation matrix
             prediction, act = self.sess.run(['model_inference:0', 
-                'AvgPool2D_2/AvgPool:0'], feed_dict=feed_dict)
+                'AvgPool2D_2/AvgPool:0'], feed_dict=self.feed_dict)
 
             cnn_data = self.process_activation(act)
 
         elif mode == 2:
             # Only process the command
-            prediction = self.sess.run(['model_inference:0'], feed_dict=feed_dict)[0]
+            prediction = self.sess.run(['model_inference:0'], feed_dict=self.feed_dict)[0]
 
             cnn_data = np.zeros([64,45])
 
