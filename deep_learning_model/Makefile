@@ -10,15 +10,15 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 # COMMANDS                                                                      #
 #################################################################################
 
-RAW_DATASET = empty_train
-DATASET = simple_train_2
-DATASET_EVAL = eval_dataset
+RAW_DATASET = shapes_train
+DATASET = shapes_train
+DATASET_EVAL = shapes_train
 
 requirements:
 	pip install -q -r requirements.txt
 
 data:
-	python src/data/make_dataset.py data/raw/$(RAW_DATASET)/ $(DATASET).h5
+	python src/data/make_dataset.py data/raw/training/$(RAW_DATASET)/ $(DATASET).h5
 
 train:
 	python src/model/train_model.py data/processed/$(DATASET).h5 \

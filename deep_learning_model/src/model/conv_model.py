@@ -63,7 +63,7 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, output_n
 
     pooling = contrib.layers.avg_pool2d(hidden_5, [1,3],[1,3], 'SAME')
     pooling = contrib.layers.flatten(pooling)
-    combined = tf.concat(1,[pooling, goal])
+    combined = tf.concat([pooling, goal], axis=1)
     fc_5 = fully_connected(combined, 256, weights_initializer=xavier_initializer(),
             weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_5')
     fc_6 = fully_connected(fc_5, 256, weights_initializer=xavier_initializer(),

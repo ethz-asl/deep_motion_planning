@@ -5,8 +5,8 @@ import logging
 import os
 import time
 
-import numpy as np
 import tensorflow as tf
+import numpy as np
 
 from model.training_wrapper import TrainingWrapper
 

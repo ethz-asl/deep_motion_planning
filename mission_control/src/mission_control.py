@@ -71,11 +71,11 @@ class MissionControl():
           self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
           self.navigation_client_deep = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
 
-            while not self.navigation_client.wait_for_server(rospy.Duration(5)):
-                rospy.loginfo('Waiting for move_base action server')
-            
-            while not self.navigation_client.wait_for_server(rospy.Duration(5)):
-                rospy.loginfo('Waiting for deep planner action server')
+          while not self.navigation_client.wait_for_server(rospy.Duration(5)):
+              rospy.loginfo('Waiting for move_base action server')
+          
+#           while not self.navigation_client_deep.wait_for_server(rospy.Duration(5)):
+#               rospy.loginfo('Waiting for deep planner action server')
 
         if stage_simulation:
           rospy.wait_for_service('/reset_positions')
@@ -187,8 +187,8 @@ class MissionControl():
                                     self.current_target[1] - feedback.base_position.pose.position.y]
 
         # Get the quaternion from the current goal
-        yaw = self.current_target[2] * math.pi/ 180.0
-        q = tf.transformations.quaternion_from_euler(0,0,yaw)
+        yaw = self.current_target[2] * math.pi / 180.0
+        q = tf.transformations.quaternion_from_euler(0, 0, yaw)
 
         current_orientation = feedback.base_position.pose.orientation
         p = [current_orientation.x, current_orientation.y, current_orientation.z, \
