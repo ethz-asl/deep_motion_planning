@@ -10,7 +10,7 @@ default_storage_path = get_pkg_dir('data_capture') + '/data/'
 
 def main():
 
-    rospy.init_node('data_capture_node')
+    rospy.init_node('data_capture_node', log_level=rospy.INFO)
 
     storage_path = rospy.get_param('~storage_path',default_storage_path)
     DataCapture(storage_path)
