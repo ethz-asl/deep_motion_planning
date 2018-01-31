@@ -49,7 +49,7 @@ def parse_mixer_file(filepath):
             if len(line) == 0 or line[0] == '#':
                 continue
 
-            splits= line.split(' ')
+            splits = line.split(' ')
 
             if len(splits) == 3:
                 path = splits[0].strip()
@@ -152,7 +152,7 @@ def main(project_dir):
     # Do not overwrite existing data containers
     if os.path.exists(target_file):
         logger.warn('Target file already exists: {}'.format(target_file))
-        overwrite = input('Overwrite (yN)? ')
+        overwrite = raw_input('Overwrite (yN)?')
         if overwrite.lower() == 'y':
             logger.info('Overwrite file')
         else:
@@ -165,7 +165,7 @@ def main(project_dir):
 
     # Make shure, files in a sequence are not from the same source
     random.shuffle(all_files)
-
+    
     with pd.HDFStore(target_file, 'w') as store:
         num_elements = 0
 
@@ -178,6 +178,7 @@ def main(project_dir):
 
             print('{}/{}) {}'.format(i, len(all_files), f) + filler, end='\r')
             current = pd.read_csv(f)
+            logger.info("Shape of current data is {}".format(current.shape))
 
             # Make sure the final dataframe has a continous index
             current['original_index'] = current.index
