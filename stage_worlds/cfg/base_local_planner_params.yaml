@@ -18,6 +18,7 @@ DWAPlannerROS:
   acc_lim_y: 0.0
 
   xy_goal_tolerance: 0.1
+  yaw_goal_tolerance: 10.0
 
   sim_time: 1.0
   vx_samples: 8
