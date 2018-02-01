@@ -10,8 +10,8 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 # COMMANDS                                                                      #
 #################################################################################
 
-DATASET = combined
-DATASET_EVAL = evaluation
+DATASET = shapes_300
+DATASET_EVAL = shapes_300
 
 requirements:
 	pip install -q -r requirements.txt

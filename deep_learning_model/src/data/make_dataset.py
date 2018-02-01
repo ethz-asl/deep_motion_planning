@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import sys
+sys.path.insert(0, '/usr/local/lib/python2.7/dist-packages')
+
 from __future__ import print_function
 
 import os
@@ -208,8 +211,8 @@ def main(project_dir):
   store.close()
 
   logger.info("Loading stored file for testing.")
-  test_file = pd.read_hdf(target_file, 'data', mode='r')
-  logger.info("File successfully loaded with {} elements.".format(test_file.shape))
+  test_file_storer = pd.HDFStore(target_file, mode='r')
+  logger.info("File successfully loaded with {} elements.".format(test_file_storer.get_storer('data').nrows))
 
 
 if __name__ == '__main__':
