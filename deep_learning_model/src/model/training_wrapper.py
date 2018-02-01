@@ -69,7 +69,7 @@ class TrainingWrapper():
 
       logger.info('Add operations to the computation graph')
       keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
-      prediction = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size, output_name='prediction')
+      prediction = model.inference(data_batch[:, :1083], keep_prob_placeholder, self.args.batch_size, output_name='prediction')
 
       loss, loss_split = model.loss(prediction, cmd_batch)
 

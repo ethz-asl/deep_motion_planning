@@ -120,6 +120,8 @@ class FastDataHandler():
               goal_columns.append(j)
             if column in ['filtered_linear_command','filtered_angular_command']:
               cmd_columns.append(j)
+            if column in ['filtered_linear_odom','filtered_angular_odom']:
+              odom_vel_columns.append(j)
 
           # Only use the center n_scans elements as input
           n_scans = 1080
@@ -153,8 +155,12 @@ class FastDataHandler():
           norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2,
             axis=1).reshape([self.batchsize, 1]), self.perception_radius)
 
+
+          # Velocity measurements (current velocity of robot)
+          odom_vel = chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, odom_vel_columns].values
+
           # Concatenate data: laser, goal angle, goal distance, goal heading
-          data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1])), axis=1)
+          data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1]), odom_vel), axis=1)
 
           yield (data.copy(), chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values)
           current_index += self.batchsize
