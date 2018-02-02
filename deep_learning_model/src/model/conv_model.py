@@ -32,26 +32,80 @@ def __get_variable__(index, input_size, output_size):
             initializer=tf.contrib.layers.xavier_initializer()),
             tf.get_variable('biases_hidden{}'.format(index), [output_size]))
 
-def inference(data, keep_prob, sample_size, training=True, reuse=False, output_name='prediction'):
+def _conv_layer(input, weights, biases, conv_stride_length=1, padding="SAME", name="conv", summary=False):
+  """
+  Standard 2D convolutional layer
+  """
+  conv = tf.nn.conv2d(input, filter=weights, strides=[1, conv_stride_length, conv_stride_length, 1], padding=padding, name=name)
+  activations = tf.nn.relu(conv + biases)
+  if summary:
+    tf.summary.histogram(name, activations)
+  return activations
+
+
+def _fc_layer(input, weights, biases, use_activation=False, name="fc", summary=False):
+  """
+  Fully connected layer with given weights and biases.
+  Activation and summary can be activated with the arguments.
+  """
+  affine_result = tf.matmul(input, weights) + biases
+  if use_activation:
+    activations = tf.nn.sigmoid(affine_result)
+  else:
+    activations = affine_result
+  if summary:
+    tf.summary.histogram(name + "_activations", activations)
+  return activations
+
+def _get_weight_variable(shape, name, regularizer=None,
+                         initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                         summary=True, trainable=True):
+  """
+  Get weight variable with specific initializer.
+  """
+  var = tf.get_variable(name=name, shape=shape, initializer=initializer,
+                        regularizer=tf.contrib.layers.l2_regularizer(0.01),
+                        trainable=trainable)
+  if summary:
+    tf.summary.histogram(name, var)
+  return var
+
+def _get_bias_variable(shape, name, regularizer=None,
+                       initializer=tf.constant_initializer(0.1),
+                       summary=True, trainable=True):
+  """
+  Get bias variable with specific initializer.
+  """
+  var = tf.get_variable(name=name, shape=shape, initializer=initializer, trainable=trainable)
+  if summary:
+    tf.summary.histogram(name, var)
+  return var
+
+
+def inference(data, keep_prob, sample_size, training=True, reuse=False, regularization_weight=0.001, output_name='prediction'):
   """
   Define the deep neural network used for inference
   """
   # slice 709 elements to get the correct size for the next convolutions
-  laser = tf.slice(data, [0,0], [sample_size,1080])
-  goal = tf.slice(data, [0,1080], [sample_size,3])
+  laser = tf.slice(data, [0, 0], [sample_size, 1080])
+  goal = tf.slice(data, [0, 1080], [sample_size, 3])
 
-  laser = tf.reshape(laser, [sample_size, 1, 1080, 1])
+  laser = tf.reshape(laser, [sample_size, 1, 1080, 1])  # format into [batch_size, height, width, channels]
+
   hidden_1 = conv2d(laser, 64, [1,7], stride=3, normalizer_fn=batch_norm,
       weights_initializer=xavier_initializer_conv2d(),
       weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_1')
   hidden_1 = contrib.layers.max_pool2d(hidden_1, [1,3],[1,3], 'SAME')
+  print("hidden_1: {}".format(hidden_1.get_shape()))
   hidden_2 = conv2d(hidden_1, 64, [1,3], normalizer_fn=batch_norm,
       weights_initializer=xavier_initializer_conv2d(),
       weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_2')
   hidden_3 = conv2d(hidden_2, 64, [1,3], activation_fn=None, normalizer_fn=batch_norm,
       weights_initializer=xavier_initializer_conv2d(),
       weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_3')
+  print("hidden_3 BEFORE fusion: {}".format(hidden_3.get_shape()))
   hidden_3 = tf.nn.relu(hidden_3 + hidden_1)
+  print("hidden_3 AFTER fusion: {}".format(hidden_3.get_shape()))
   hidden_4 = conv2d(hidden_3, 64, [1,3], normalizer_fn=batch_norm,
       weights_initializer=xavier_initializer_conv2d(),
       weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_4')
