@@ -64,7 +64,7 @@ class TrainingWrapper():
       self.sess = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=8))
 
       logger.info('Create the data runner for the input data')
-      self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**12)
+      self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**14)
       data_batch, cmd_batch = self.custom_data_runner.get_inputs()
 
       logger.info('Data batch size: {}'.format(data_batch.shape))
