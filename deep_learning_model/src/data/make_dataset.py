@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 import sys
 sys.path.insert(0, '/usr/local/lib/python2.7/dist-packages')
 
-from __future__ import print_function
 
 import os
 import logging

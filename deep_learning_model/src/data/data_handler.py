@@ -10,6 +10,7 @@ class DataHandler():
     self.shuffle = shuffle
     self.perception_radius = 10.0
     self.mean_filter_size = 5
+    self.use_odom_vel = False
 
     if not os.path.exists(filepath):
       raise IOError('File does not exists: {}'.format(filepath))
@@ -57,10 +58,17 @@ class DataHandler():
     ind = next(self.batches)
     df = pd.read_hdf(self.filepath, 'data', where='index=ind')
 
+    # Add new entry to data with filtered velocities
     df['filtered_linear_command'] = pd.Series.rolling(df['linear_x_command'],
         window=self.mean_filter_size, center=True).mean().fillna(df['linear_x_command'])
     df['filtered_angular_command'] = pd.Series.rolling(df['angular_z_command'],
         window=self.mean_filter_size, center=True).mean().fillna(df['angular_z_command'])
+
+    if self.use_odom_vel:
+      df['filtered_linear_odom'] = pd.Series.rolling(df['linear_x_odom'],
+        window=self.mean_filter_size, center=True).mean().fillna(df['linear_x_odom'])
+      df['filtered_angular_odom'] = pd.Series.rolling(df['angular_z_odom'],
+        window=self.mean_filter_size, center=True).mean().fillna(df['angular_z_odom'])
 
     laser_columns = list()
     goal_columns = list()
@@ -72,6 +80,8 @@ class DataHandler():
         goal_columns.append(j)
       if column in ['filtered_linear_command','filtered_angular_command']:
         cmd_columns.append(j)
+      if column in ['filtered_linear_odom','filtered_angular_odom']:
+            odom_vel_columns.append(j)
 
     #Only use the center n_scans elements as input
     n_scans = 1080
@@ -90,7 +100,16 @@ class DataHandler():
     goal = df.iloc[:,goal_columns].values
     angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.chunksize, 1])
     norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2, axis=1).reshape([self.chunksize, 1]), self.perception_radius)
-    data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1])), axis=1)
+
+    # Velocity measurements (current velocity of robot)
+    if self.use_odom_vel:
+      odom_vel = df.iloc[j*self.batchsize:(j+1)*self.batchsize, odom_vel_columns].values
+
+    # Concatenate data: laser, goal angle, goal distance, goal heading
+    if self.use_odom_vel:
+      data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1]), odom_vel), axis=1)
+    else:
+      data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1])), axis=1)
 
     return (data.copy(), df.iloc[:, cmd_columns].copy(deep=True).values)
 

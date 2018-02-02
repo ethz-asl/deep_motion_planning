@@ -10,7 +10,7 @@ from tensorflow.contrib.layers import batch_norm, fully_connected, conv2d, xavie
 import tensorflow.contrib as contrib
 
 # Give the model a descriptive name
-NAME = 'convolutional'
+NAME = 'shapes_wo_heading'
 
 # The size of the input layer
 INPUT_SIZE = 1083

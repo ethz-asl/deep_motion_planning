@@ -15,6 +15,7 @@ class FastDataHandler():
     self.batchsize = batchsize
     self.perception_radius = maximum_perception_radius
     self.mean_filter_size = mean_filter_size
+    self.use_odom_vel = False
 
     # Check if the parameters are valid
 
@@ -97,10 +98,11 @@ class FastDataHandler():
             window=self.mean_filter_size, center=True).mean().fillna(chunk['angular_z_command'])
 
         # Velocity measurements (odometry)
-        chunk['filtered_linear_odom'] = pd.Series.rolling(chunk['linear_x_odom'],
-            window=self.mean_filter_size, center=True).mean().fillna(chunk['linear_x_odom'])
-        chunk['filtered_angular_odom'] = pd.Series.rolling(chunk['angular_z_odom'],
-            window=self.mean_filter_size, center=True).mean().fillna(chunk['angular_z_odom'])
+        if self.use_odom_vel:
+          chunk['filtered_linear_odom'] = pd.Series.rolling(chunk['linear_x_odom'],
+              window=self.mean_filter_size, center=True).mean().fillna(chunk['linear_x_odom'])
+          chunk['filtered_angular_odom'] = pd.Series.rolling(chunk['angular_z_odom'],
+              window=self.mean_filter_size, center=True).mean().fillna(chunk['angular_z_odom'])
 
         # Shuffle the data
         chunk = chunk.reindex(np.random.permutation(chunk.index))
@@ -157,10 +159,14 @@ class FastDataHandler():
 
 
           # Velocity measurements (current velocity of robot)
-          odom_vel = chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, odom_vel_columns].values
+          if self.use_odom_vel:
+            odom_vel = chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, odom_vel_columns].values
 
           # Concatenate data: laser, goal angle, goal distance, goal heading
-          data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1]), odom_vel), axis=1)
+          if self.use_odom_vel:
+            data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1]), odom_vel), axis=1)
+          else:
+            data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1])), axis=1)
 
           yield (data.copy(), chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values)
           current_index += self.batchsize
@@ -176,7 +182,6 @@ class FastDataHandler():
               got_data = True
             else:
               time.sleep(0.5)
-          print('Waited: {}'.format(time.time() - start_time))
 
         if self.interrupt_thread:
           return

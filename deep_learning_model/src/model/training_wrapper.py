@@ -64,12 +64,14 @@ class TrainingWrapper():
       self.sess = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=8))
 
       logger.info('Create the data runner for the input data')
-      self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**10)
+      self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**12)
       data_batch, cmd_batch = self.custom_data_runner.get_inputs()
+
+      logger.info('Data batch size: {}'.format(data_batch.shape))
 
       logger.info('Add operations to the computation graph')
       keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
-      prediction = model.inference(data_batch[:, :1083], keep_prob_placeholder, self.args.batch_size, output_name='prediction')
+      prediction = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size, output_name='prediction')
 
       loss, loss_split = model.loss(prediction, cmd_batch)
 
