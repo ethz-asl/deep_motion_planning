@@ -10,7 +10,12 @@ import numpy as np
 
 from data.custom_data_runner import CustomDataRunner
 from data.data_handler import DataHandler
-import conv_model as model
+import simple_model as model
+
+
+DIST_MEAS_SIZE = 36
+TARGET_SIZE = 2
+CMD_SIZE = 2
 
 class TrainingWrapper():
   """Wrap the training"""
@@ -77,14 +82,14 @@ class TrainingWrapper():
 
       train_op = model.training(loss, loss_split, learning_rate, global_step)
 
-      eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(1083, 2, 'eval_data_input')
+      eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE, CMD_SIZE, 'eval_data_input')
       eval_prediction = model.inference(eval_data_placeholder, keep_prob_placeholder,
           self.eval_batch_size, training=False, reuse=True, output_name='eval_prediction')
       eval_predictions_placeholder = tf.placeholder(tf.float32, shape=[self.eval_n_elements,2])
       evaluation, evaluation_split = model.evaluation(eval_predictions_placeholder, eval_cmd_placeholder)
 
       # This model is saved with the trained weights and can direclty be executed
-      exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(1083, 2)
+      exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE, CMD_SIZE)
       model_inference = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
           training=False, reuse=True, output_name='model_inference')
 
@@ -137,7 +142,7 @@ class TrainingWrapper():
 
       logger.info('Load the evaluation data')
       (X_eval,Y_eval) = DataHandler(self.args.datafile_eval, self.eval_n_elements,
-          shuffle=False).next_batch()
+          shuffle=False, laser_subsampling=True).next_batch()
       X_eval = self.check_extend(X_eval, np.ceil(self.eval_n_elements / self.eval_batch_size) * self.eval_batch_size)
 
       loss_train = 0.0
@@ -195,7 +200,7 @@ class TrainingWrapper():
 
           duration_eval = time.time() - start_eval
 
-          logger.info('Evaluattion: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
+          logger.info('Evaluation: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
 
           eval_summary_writer.add_summary(summary_str, step)
           eval_summary_writer.flush()

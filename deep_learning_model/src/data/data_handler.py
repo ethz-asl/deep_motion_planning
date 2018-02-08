@@ -1,16 +1,19 @@
 import os
 import pandas as pd
 import numpy as np
+import support as sup
 
 class DataHandler():
   """Class to load data from HDF5 storages in a random and chunkwise manner"""
-  def __init__(self, filepath, chunksize=1000, shuffle = True):
+  def __init__(self, filepath, chunksize=1000, shuffle = True, laser_subsampling = False, num_dist_values = 36):
     self.filepath = filepath
     self.chunksize = chunksize
     self.shuffle = shuffle
     self.perception_radius = 10.0
     self.mean_filter_size = 5
     self.use_odom_vel = False
+    self.laser_subsampling = True
+    self.num_dist_values = num_dist_values
 
     if not os.path.exists(filepath):
       raise IOError('File does not exists: {}'.format(filepath))
@@ -97,6 +100,8 @@ class DataHandler():
         laser_columns = laser_columns[0:-1]
 
     laser = np.minimum(df.iloc[:,laser_columns].values, self.perception_radius)
+    if self.laser_subsampling:
+      laser = sup.subsample_laser(laser, self.num_dist_values)
     goal = df.iloc[:,goal_columns].values
     angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.chunksize, 1])
     norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2, axis=1).reshape([self.chunksize, 1]), self.perception_radius)
