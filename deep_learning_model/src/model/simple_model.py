@@ -10,7 +10,7 @@ from tensorflow.contrib.layers import batch_norm, fully_connected, conv2d, xavie
 import tensorflow.contrib as contrib
 
 # Give the model a descriptive name
-NAME = 'shapes_wo_heading'
+NAME = 'fc_36_laser'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 36

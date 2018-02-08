@@ -36,7 +36,7 @@ sync-gpu:
 	rsync -av --progress --exclude models/ * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/testing/imitation_learning/
 	
 train-gpu:
-	rsync -av --progress --exclude models/ * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/testing/imitation_learning/
+	rsync -av --progress --exclude models/ --exclude data/raw * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/testing/imitation_learning/
 	ssh -t $(USERNAME)@$(GPU_MACHINE) bash -il -c "'cd testing/imitation_learning; make train'"
 	rm -rf model/*
 	rsync -av --progress $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/testing/imitation_learning/models/default/* gpu_models/

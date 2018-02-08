@@ -182,7 +182,7 @@ class TrainingWrapper():
             start_index = index*self.eval_batch_size
             end_index = (index+1)*self.eval_batch_size
             feed_dict = {
-                eval_data_placeholder: X_eval[start_index:end_index,:],
+                eval_data_placeholder: X_eval[start_index:end_index,:-1],
                 keep_prob_placeholder: 1.0
                 }
             eval_predictions[start_index:end_index,:] = self.sess.run([eval_prediction],
@@ -205,7 +205,7 @@ class TrainingWrapper():
           eval_summary_writer.add_summary(summary_str, step)
           eval_summary_writer.flush()
 
-        if step > 0 and step % 1000 == 0:
+        if step > 0 and step % 10000 == 0:
           # Save a checkpoint
           logger.info('Save model snapshot')
           filename = os.path.join(storage_path, 'snap')
