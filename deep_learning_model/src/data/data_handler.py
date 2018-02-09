@@ -5,11 +5,11 @@ import support as sup
 
 class DataHandler():
   """Class to load data from HDF5 storages in a random and chunkwise manner"""
-  def __init__(self, filepath, chunksize=1000, shuffle = True, laser_subsampling = False, num_dist_values = 36):
+  def __init__(self, filepath, chunksize=1000, shuffle = True, laser_subsampling = False, num_dist_values = 36, perception_radius=30.0):
     self.filepath = filepath
     self.chunksize = chunksize
     self.shuffle = shuffle
-    self.perception_radius = 10.0
+    self.perception_radius = perception_radius
     self.mean_filter_size = 5
     self.use_odom_vel = False
     self.laser_subsampling = True
@@ -101,10 +101,13 @@ class DataHandler():
 
     laser = np.minimum(df.iloc[:,laser_columns].values, self.perception_radius)
     if self.laser_subsampling:
-      laser = sup.subsample_laser(laser, self.num_dist_values)
+      laser = sup.transform_laser(laser, self.num_dist_values)
     goal = df.iloc[:,goal_columns].values
     angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.chunksize, 1])
     norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2, axis=1).reshape([self.chunksize, 1]), self.perception_radius)
+
+    angle = sup.transform_target_angle(angle, np.pi)
+    norm = sup.transform_target_distance(norm, self.perception_radius)
 
     # Velocity measurements (current velocity of robot)
     if self.use_odom_vel:

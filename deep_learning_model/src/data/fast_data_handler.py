@@ -11,7 +11,7 @@ import support as sup
 
 class FastDataHandler():
   """Class to load data from HDF5 storages in a random and chunckwise manner"""
-  def __init__(self, filepath, batchsize = 16, chunksize=None, maximum_perception_radius=10,
+  def __init__(self, filepath, batchsize = 16, chunksize=None, maximum_perception_radius=30.0,
                mean_filter_size=5, laser_subsampling=False, num_dist_values = 36):
     self.filepath = filepath
     self.chunksize = chunksize
@@ -156,7 +156,7 @@ class FastDataHandler():
           laser = np.minimum(chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,laser_columns].values,
               self.perception_radius)
           if self.laser_subsampling:
-            laser = sup.subsample_laser(laser, self.num_dist_values)
+            laser = sup.transform_laser(laser, self.num_dist_values)
 
           # Goal data: distance, angle, heading (in robot frame)
           goal =  chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,goal_columns].values
@@ -164,6 +164,8 @@ class FastDataHandler():
           norm = np.minimum(np.linalg.norm(goal[:,0:2], ord=2,
             axis=1).reshape([self.batchsize, 1]), self.perception_radius)
 
+          angle = sup.transform_target_angle(angle, np.pi)
+          norm = sup.transform_target_distance(norm, self.perception_radius)
 
           # Velocity measurements (current velocity of robot)
           if self.use_odom_vel:

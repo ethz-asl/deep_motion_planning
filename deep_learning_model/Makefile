@@ -33,7 +33,7 @@ eval:
 																		../deep_motion_planner/models/model.pb
 																		
 sync-gpu: 
-	rsync -av --progress --exclude models/ * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/testing/imitation_learning/
+	rsync -av --progress --exclude models/ --exclude data/raw * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/testing/imitation_learning/
 	
 train-gpu:
 	rsync -av --progress --exclude models/ --exclude data/raw * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/testing/imitation_learning/
