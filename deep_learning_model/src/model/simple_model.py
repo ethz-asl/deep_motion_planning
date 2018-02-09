@@ -10,7 +10,7 @@ from tensorflow.contrib.layers import batch_norm, fully_connected, conv2d, xavie
 import tensorflow.contrib as contrib
 
 # Give the model a descriptive name
-NAME = 'fc_36_laser'
+NAME = 'fc_36_laser_transform'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 36
@@ -152,7 +152,7 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
   hidden_layer1 = tf.nn.tanh(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
   hidden_layer2 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer1, weights['h2']), biases['b2']))
   hidden_layer3 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer2, weights['h3']), biases['b3']))
-  prediction = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']))
+  prediction = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']), name=output_name)
 
   return prediction
 
