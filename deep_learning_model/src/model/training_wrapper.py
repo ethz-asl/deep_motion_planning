@@ -222,7 +222,7 @@ class TrainingWrapper():
       # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/freeze_graph.py
       logger.info('Save final model with weights')
       output_node_names = 'model_inference'
-      output_graph_def = tf.python.client.graph_util.convert_variables_to_constants(
+      output_graph_def = tf.graph_util.convert_variables_to_constants(
           self.sess, self.sess.graph_def, output_node_names.split(","))
       with tf.gfile.GFile(os.path.join(storage_path, 'model.pb'), "wb") as f:
           f.write(output_graph_def.SerializeToString())
