@@ -17,6 +17,8 @@ from geometry_msgs.msg import Twist, PoseStamped, Point, Quaternion
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
 from sensor_msgs.msg import Joy
 from nav_msgs.msg import Path
+# print("Current path: {}".format(os.path.dirname(os.path.abspath(__file__))))
+import support as sup
 
 
 # Tensorflow
@@ -38,6 +40,7 @@ class DeepMotionPlanner():
     self.base_position = None
     self.base_orientation = None
     self.max_laser_range = 10.0
+    self.num_subsampled_scans = 36
 
     # Load various ROS parameters
     if not rospy.has_param('~model_path'):
@@ -141,7 +144,11 @@ class DeepMotionPlanner():
         scan_msg = copy.copy(self.last_scan)
         self.scan_lock.release()
 
-        cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans, perception_radius = 10.0)
+        cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans, perception_radius = 30.0)
+
+        # Convert scans to numpy array
+        cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
+        transformed_scans = sup.subsample_laser(cropped_scans_np, self.num_subsampled_scans)
 
         if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
           rospy.logerr('Scan contained invalid float (nan or inf)')
@@ -173,7 +180,7 @@ class DeepMotionPlanner():
         goal_msg.data = data
         self.input_goal_pub.publish(goal_msg)
 
-        input_data = list(cropped_scans) + data.tolist()
+        input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2]
 
         linear_x, angular_z = tf_wrapper.inference(input_data)
 
