@@ -8,6 +8,7 @@ import logging
 import tensorflow as tf
 from tensorflow.contrib.layers import batch_norm, fully_connected, conv2d, xavier_initializer_conv2d, xavier_initializer, l1_regularizer
 import tensorflow.contrib as contrib
+import numpy as np
 
 # Give the model a descriptive name
 NAME = 'fc_36_laser_transform'
@@ -24,7 +25,8 @@ CMD_SIZE = 2
 N_LASER_MEASUREMENTS = 1080
 MEASUREMENTS_PER_SLICE = N_LASER_MEASUREMENTS / N_RANGE_FINDINGS
 
-
+LOWER_ACTION_LIMITS = np.array([-0.4, -np.pi])
+UPPER_ACTION_LIMITS = np.array([0.9, np.pi])
 
 # Helper functions
 def exp_transform(distance, decay_factor = 0.2):
@@ -152,9 +154,16 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
   hidden_layer1 = tf.nn.tanh(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
   hidden_layer2 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer1, weights['h2']), biases['b2']))
   hidden_layer3 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer2, weights['h3']), biases['b3']))
-  prediction = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']), name=output_name)
+  prediction_norm = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']), name='normalized_output')
 
-  return prediction
+  # De-normalize output prediction
+  prediction = prediction_norm
+
+  range_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS - LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
+  avg_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS + LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
+  prediction = tf.add(tf.multiply(prediction_norm, range_limits), avg_limits, name=output_name)
+
+  return prediction, weights, biases
 
 def loss(prediction, cmd):
   """
