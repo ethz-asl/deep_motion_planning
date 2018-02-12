@@ -13,7 +13,7 @@ roslaunch stage_worlds shapes.launch deep_motion_planning:=False
 
 You can then start a mission by executing:
 ```
-rosrun mission_control mission_control_node.py _mission_file:=src/deep_motion_planning/mission_control/missions/rooms.txt _deep_motion_planner:=False
+rosrun mission_control mission_control_node.py _mission_file:=$(rospack find mission_control)/missions/rooms.txt _deep_motion_planner:=False
 ```
 The parameter <_mission_file> defines the path to the mission definition that you want to execute. 
 The example above assumes that you are in the top folder of your catkin workspace.
@@ -31,7 +31,7 @@ roslaunch stage_worlds shapes.launch deep_motion_planning:=True
 
 You can then start a mission by executing:
 ```
-rosrun mission_control mission_control_node.py _mission_file:=src/deep_motion_planning/mission_control/missions/rooms.txt _deep_motion_planner:=True
+rosrun mission_control mission_control_node.py _mission_file:=$(rospack find mission_control)/missions/rooms.txt _deep_motion_planner:=True
 ```
 The parameter <_mission_file> defines the path to the mission definition that you want to execute. 
 The example above assumes that you are in the top folder of your catkin workspace.
