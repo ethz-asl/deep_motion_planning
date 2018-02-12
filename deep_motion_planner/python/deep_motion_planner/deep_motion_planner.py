@@ -39,7 +39,7 @@ class DeepMotionPlanner():
     self.send_motion_commands = True
     self.base_position = None
     self.base_orientation = None
-    self.max_laser_range = 10.0
+    self.max_laser_range = 30.0
     self.num_subsampled_scans = 36
 
     # Load various ROS parameters
@@ -148,7 +148,7 @@ class DeepMotionPlanner():
 
         # Convert scans to numpy array
         cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
-        transformed_scans = sup.subsample_laser(cropped_scans_np, self.num_subsampled_scans)
+        transformed_scans = sup.transform_laser(cropped_scans_np, self.num_subsampled_scans)
 
         if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
           rospy.logerr('Scan contained invalid float (nan or inf)')
@@ -172,8 +172,14 @@ class DeepMotionPlanner():
         # and publish a new command
         goal = np.array(target)
         angle = np.arctan2(goal[1],goal[0])
-        norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), 10.0)
-        data = np.stack((angle, norm, goal[2]))
+        norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), self.max_laser_range)
+
+        # Normalize / transform
+        transformed_angle = sup.transform_target_angle(angle, norm_angle=np.pi)
+        transformed_norm = sup.transform_target_distance(norm, norm_range=self.max_laser_range)
+
+        data = np.stack((transformed_angle, transformed_norm, goal[2]))
+#         data = np.stack((angle, norm, goal[2]))
 
         # Publish the goal pose fed into the network
         goal_msg = Float32MultiArray()
