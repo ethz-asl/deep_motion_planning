@@ -8,6 +8,8 @@ import getpass
 import tensorflow as tf
 import numpy as np
 
+import cPickle as pickle
+
 from data.custom_data_runner import CustomDataRunner
 from data.data_handler import DataHandler
 import simple_model as model
@@ -76,21 +78,21 @@ class TrainingWrapper():
 
       logger.info('Add operations to the computation graph')
       keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
-      prediction = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size, output_name='prediction')
+      prediction, _, _ = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size, output_name='prediction')
 
       loss, loss_split = model.loss(prediction, cmd_batch)
 
       train_op = model.training(loss, loss_split, learning_rate, global_step)
 
       eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE, CMD_SIZE, 'eval_data_input')
-      eval_prediction = model.inference(eval_data_placeholder, keep_prob_placeholder,
+      eval_prediction, weights_node, biases_node = model.inference(eval_data_placeholder, keep_prob_placeholder,
           self.eval_batch_size, training=False, reuse=True, output_name='eval_prediction')
       eval_predictions_placeholder = tf.placeholder(tf.float32, shape=[self.eval_n_elements,2])
       evaluation, evaluation_split = model.evaluation(eval_predictions_placeholder, eval_cmd_placeholder)
 
       # This model is saved with the trained weights and can direclty be executed
       exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE, CMD_SIZE)
-      model_inference = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
+      model_inference, _, _ = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
           training=False, reuse=True, output_name='model_inference')
 
       # Variables to use in the summary (shown in tensorboard)
@@ -210,6 +212,10 @@ class TrainingWrapper():
           logger.info('Save model snapshot')
           filename = os.path.join(storage_path, 'snap')
           saver.save(self.sess, filename, global_step=step)
+
+          weights_store, biases_store = self.sess.run([weights_node, biases_node])
+          pickle.dump((weights_store, biases_store), open(os.path.join(storage_path, 'variables_{}.p'.format(step)), 'wb'))
+
 
       logger.info('Save final model snapshot')
       filename = os.path.join(storage_path, 'final')
