@@ -24,7 +24,7 @@ class MissionControl():
     """Class that takes a mission file and executes the mission"""
 
     def __init__(self):
-        
+
         # Load a mission and parse the file
         mission_file = rospy.get_param('~mission_file')
         deep_motion_planner = rospy.get_param('~deep_motion_planner', default=False)
@@ -73,7 +73,7 @@ class MissionControl():
 
         if stage_simulation:
           rospy.wait_for_service('/reset_positions')
-        
+
         # Start the mission if it is not empty
         if len(self.mission) > 0:
             rospy.loginfo('Start mission')
@@ -176,7 +176,7 @@ class MissionControl():
 
         # Get the quaternion from the current goal
         yaw = self.current_target[2] * math.pi/ 180.0
-        q = tf.transformations.quaternion_from_euler(0,0,yaw)
+        q = tf.transformations.quaternion_from_euler(0., 0., yaw)
 
         current_orientation = feedback.base_position.pose.orientation
         p = [current_orientation.x, current_orientation.y, current_orientation.z, \
@@ -286,7 +286,7 @@ class MissionControl():
 
             # Restore old 1D array
             self.costmap.data = current.flatten()
-            
+
     def __check_target_validity__(self, target):
         """
         Check if the given target is located in an obstacle or its inflation radius
@@ -314,9 +314,9 @@ class MissionControl():
             reset_simulation()
         except rospy.ServiceException, e:
             print('Service call failed: {}'.format(e))
-            
+
     def joystick_callback(self, data):
-        # Abort planning 
+        # Abort planning
         if data.buttons[4] == 1 and data.buttons[5] == 1:
             rospy.signal_shutdown('Mission Finished')
 

@@ -1,6 +1,0 @@
-model_checkpoint_path: "final"
-all_model_checkpoint_paths: "snap-160000"
-all_model_checkpoint_paths: "snap-170000"
-all_model_checkpoint_paths: "snap-180000"
-all_model_checkpoint_paths: "snap-190000"
-all_model_checkpoint_paths: "final"

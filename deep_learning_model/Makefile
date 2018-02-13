@@ -10,8 +10,8 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 # COMMANDS                                                                      #
 #################################################################################
 
-DATASET = shapes_500_wo_heading
-DATASET_EVAL = shapes_300
+DATASET = mixed_office_shapes_500
+DATASET_EVAL = eval_200
 
 # Makefile arguments
 GPU_MACHINE = lynx
