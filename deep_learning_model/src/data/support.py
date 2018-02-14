@@ -82,6 +82,11 @@ def get_target_in_robot_frame(robot_pose_global_frame, target_pose_global_frame)
 
   return target
 
+def get_yaw_from_quat(orientation):
+  p = [orientation.x, orientation.y, orientation.z, orientation.w]
+  return tf.transformations.euler_from_quaternion(p)[2]
+
+
 #### Some minor functions to compare quaternion transformation
 def get_distance(pos1, pos2):
     return np.sqrt((pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2 + (pos1.z - pos2.z)**2)

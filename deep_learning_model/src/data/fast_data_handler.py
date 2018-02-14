@@ -120,6 +120,7 @@ class FastDataHandler():
           odom_vel_columns = []
           odom_vel_columns = []
           robot_pose_global_frame_columns = []
+          target_global_frame_columns = []
 
           # Extract each column and check its name
           for j,column in enumerate(chunk.columns):

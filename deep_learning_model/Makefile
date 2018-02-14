@@ -10,7 +10,7 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 # COMMANDS                                                                      #
 #################################################################################
 
-DATASET = mixed_office_shapes_500
+DATASET = shapes_250
 DATASET_EVAL = eval_200
 
 # Makefile arguments
