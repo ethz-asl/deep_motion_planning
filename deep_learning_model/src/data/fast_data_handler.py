@@ -114,10 +114,12 @@ class FastDataHandler():
 
         # On the first call, get the column indices for the input data and the commands
         if not laser_columns or not goal_columns or not cmd_columns or not odom_vel_columns:
-          laser_columns = list()
-          goal_columns = list()
-          cmd_columns = list()
-          odom_vel_columns = list()
+          laser_columns = []
+          goal_columns = []
+          cmd_columns = []
+          odom_vel_columns = []
+          odom_vel_columns = []
+          robot_pose_global_frame_columns = []
 
           # Extract each column and check its name
           for j,column in enumerate(chunk.columns):
@@ -129,6 +131,10 @@ class FastDataHandler():
               cmd_columns.append(j)
             if column in ['filtered_linear_odom','filtered_angular_odom']:
               odom_vel_columns.append(j)
+            if 'robot_pose_global_frame' in column:
+              robot_pose_global_frame_columns.append(j)
+            if 'target_global_frame' in column:
+              target_global_frame_columns.append(j)
 
           # Only use the center n_scans elements as input
           n_scans = 1080

@@ -73,9 +73,12 @@ class DataHandler():
       df['filtered_angular_odom'] = pd.Series.rolling(df['angular_z_odom'],
         window=self.mean_filter_size, center=True).mean().fillna(df['angular_z_odom'])
 
-    laser_columns = list()
-    goal_columns = list()
-    cmd_columns = list()
+    laser_columns = []
+    goal_columns = []
+    cmd_columns = []
+    odom_vel_columns = []
+    robot_pose_global_frame_columns = []
+    target_global_frame_columns = []
     for j,column in enumerate(df.columns):
       if column.split('_')[0] in ['laser']:
         laser_columns.append(j)
@@ -84,7 +87,11 @@ class DataHandler():
       if column in ['filtered_linear_command','filtered_angular_command']:
         cmd_columns.append(j)
       if column in ['filtered_linear_odom','filtered_angular_odom']:
-            odom_vel_columns.append(j)
+        odom_vel_columns.append(j)
+      if 'robot_pose_global_frame' in column:
+        robot_pose_global_frame_columns.append(j)
+      if 'target_global_frame' in column:
+        target_global_frame_columns.append(j)
 
     #Only use the center n_scans elements as input
     n_scans = 1080
