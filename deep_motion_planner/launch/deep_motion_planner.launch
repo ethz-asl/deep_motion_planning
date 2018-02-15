@@ -2,7 +2,7 @@
   <node name="deep_motion_planner" pkg="deep_motion_planner" type="deep_motion_planner_node.py"
   output="screen">
     <remap from="scan" to="base_scan"/>
-    <param name="model_path" type="string" value="$(find deep_motion_planner)/models/2018-02-13_10-08_fc_36_laser_transform" />
+    <param name="model_path" type="string" value="$(find deep_motion_planner)/models/2018-02-14_17-57_fc_36_laser_transform" />
     <param name="use_checkpoints" type="bool" value="False" />
     <param name="protobuf_file" type="string" value="model.pb" />
   </node>

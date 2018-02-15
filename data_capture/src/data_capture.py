@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, '/usr/local/lib/python2.7/dist-packages')
 
+
 import rospy
 import message_filters
 from sensor_msgs.msg import LaserScan
@@ -14,6 +15,9 @@ import csv
 import os
 from datetime import datetime
 import numpy as np
+
+import support as sup
+
 
 class DataCapture():
   """Class that captures various ROS messages and saves them into a .csv file"""
@@ -93,7 +97,6 @@ class DataCapture():
     """
     Callback for the syncronizer that caches the syncronized messages
     """
-
     if self.enable_capture:
       # concatenate the data and add it to the buffer
       orientation = [target.pose.orientation.x, target.pose.orientation.y,
@@ -124,7 +127,7 @@ class DataCapture():
       rospy.logdebug("Global target: ({}, {}, {})".format(target_global_frame_x,
                                                          target_global_frame_y,
                                                          target_global_frame_yaw * 180. / np.pi))
-      rospy.logdebug("Relative target: ({}, {}, {})\n".format(target.pose.position.x, target.pose.position.y, yaw * 180. / np.pi))
+      rospy.logdebug("Relative target: ({}, {}, {})".format(target.pose.position.x, target.pose.position.y, yaw * 180. / np.pi))
 
       self.data_buffer.append(new_row)
 

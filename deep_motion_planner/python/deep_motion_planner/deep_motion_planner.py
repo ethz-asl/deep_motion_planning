@@ -239,8 +239,6 @@ class DeepMotionPlanner():
     self._as.publish_feedback(feedback)
 
     # Compute the relative goal position
-    goal_position_difference = [self.target_pose.target_pose.pose.position.x - feedback.base_position.pose.position.x,
-                  self.target_pose.target_pose.pose.position.y - feedback.base_position.pose.position.y]
 
     # Get the current orientation and the goal orientation
     current_orientation = feedback.base_position.pose.orientation
@@ -250,24 +248,15 @@ class DeepMotionPlanner():
     q = [goal_orientation.x, goal_orientation.y, goal_orientation.z, \
         goal_orientation.w]
 
-    # Rotate the relative goal position into the base frame
-    goal_position_base_frame = tf.transformations.quaternion_multiply(
-        tf.transformations.quaternion_inverse(p),
-        tf.transformations.quaternion_multiply([goal_position_difference[0],
-          goal_position_difference[1], 0, 0], p))
-
-    # Compute the difference to the goal orientation
-    orientation_to_target = tf.transformations.quaternion_multiply(q, \
-        tf.transformations.quaternion_inverse(p))
-    yaw = tf.transformations.euler_from_quaternion(orientation_to_target)[2]
-
-    rel_target = PoseStamped()
-    rel_target.pose.position.x = goal_position_base_frame[0]
-    rel_target.pose.position.y = -goal_position_base_frame[1]
-    rel_target.pose.orientation.z = yaw
+    rel_target = sup.get_target_in_robot_frame(np.array([feedback.base_position.pose.position.x,
+                                                         feedback.base_position.pose.position.y,
+                                                         sup.get_yaw_from_quat(current_orientation)]),
+                                               np.array([self.target_pose.target_pose.pose.position.x,
+                                                         self.target_pose.target_pose.pose.position.y,
+                                                         sup.get_yaw_from_quat(goal_orientation)]))
     self.relative_target_pub.publish(rel_target)
 
-    return (goal_position_base_frame[0], -goal_position_base_frame[1], yaw)
+    return (rel_target.pose.position.x, rel_target.pose.position.y, sup.get_yaw_from_quat(rel_target.pose.orientation))
 
   def goal_callback(self):
     """

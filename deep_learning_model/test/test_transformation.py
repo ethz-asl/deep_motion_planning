@@ -53,10 +53,7 @@ target_angle_local_frame_euler = sup.get_relative_angle_to_goal(robot_pose.pose.
 target_distance_local_frame_euler = sup.get_distance(robot_pose.pose.position, target_pose.pose.position)
 
 target_position_local_frame = np.array([target_local_frame_quat.pose.position.x, target_local_frame_quat.pose.position.y])
-yaw  = tf.transformations.euler_from_quaternion([target_local_frame_quat.pose.orientation.x,
-                                                 target_local_frame_quat.pose.orientation.y,
-                                                 target_local_frame_quat.pose.orientation.z,
-                                                 target_local_frame_quat.pose.orientation.w])[2]
+yaw  = sup.get_yaw_from_quat(target_local_frame_quat.pose.orientation)
 print("Target in local frame: ({:.3f}, {:.3f}, {:.3f})".format(target_local_frame_quat.pose.position.x, target_local_frame_quat.pose.position.y, yaw * 180.0 / np.pi))
 print("Relative goal position: ({:.3f}, {:.3f})".format(np.linalg.norm(target_position_local_frame),
                                                         np.math.atan2(target_local_frame_quat.pose.position.y,

@@ -17,6 +17,8 @@ import math
 import random
 import numpy as np
 
+import support as sup
+
 from mission_file_parser import MissionFileParser
 
 class MissionControl():
@@ -171,8 +173,8 @@ class MissionControl():
         target = PoseStamped()
         target.header.stamp = rospy.Time.now()
 
-        goal_position_difference = [self.current_target[0] - feedback.base_position.pose.position.x,
-                                    self.current_target[1] - feedback.base_position.pose.position.y]
+#         goal_position_difference = [self.current_target[0] - feedback.base_position.pose.position.x,
+#                                     self.current_target[1] - feedback.base_position.pose.position.y]
 
         # Get the quaternion from the current goal
         yaw = self.current_target[2] * math.pi/ 180.0
@@ -181,23 +183,40 @@ class MissionControl():
         current_orientation = feedback.base_position.pose.orientation
         p = [current_orientation.x, current_orientation.y, current_orientation.z, \
                 current_orientation.w]
+#
+#         # Rotate the relative goal position into the base frame
+#         goal_position_base_frame = tf.transformations.quaternion_multiply(
+#                 tf.transformations.quaternion_inverse(p),
+#                 tf.transformations.quaternion_multiply([goal_position_difference[0],
+#                     goal_position_difference[1], 0, 0], p))
+#
+#         # Compute the difference to the goal orientation
+#         orientation_to_target = tf.transformations.quaternion_multiply(q, \
+#                 tf.transformations.quaternion_inverse(p))
+#         target.pose.orientation.x = orientation_to_target[0]
+#         target.pose.orientation.y = orientation_to_target[1]
+#         target.pose.orientation.z = orientation_to_target[2]
+#         target.pose.orientation.w = orientation_to_target[3]
+#
+#         target.pose.position.x = goal_position_base_frame[0]
+#         target.pose.position.y = -goal_position_base_frame[1]
 
-        # Rotate the relative goal position into the base frame
-        goal_position_base_frame = tf.transformations.quaternion_multiply(
-                tf.transformations.quaternion_inverse(p),
-                tf.transformations.quaternion_multiply([goal_position_difference[0],
-                    goal_position_difference[1], 0, 0], p))
+        target = sup.get_target_in_robot_frame(np.array([feedback.base_position.pose.position.x,
+                                                         feedback.base_position.pose.position.y,
+                                                         sup.get_yaw_from_quat(feedback.base_position.pose.orientation)]),
+                                               np.array([self.current_target[0],
+                                                         self.current_target[1],
+                                                         self.current_target[2] * np.pi / 180.]))
+        target.header.stamp = rospy.Time.now()
 
-        # Compute the difference to the goal orientation
-        orientation_to_target = tf.transformations.quaternion_multiply(q, \
-                tf.transformations.quaternion_inverse(p))
-        target.pose.orientation.x = orientation_to_target[0]
-        target.pose.orientation.y = orientation_to_target[1]
-        target.pose.orientation.z = orientation_to_target[2]
-        target.pose.orientation.w = orientation_to_target[3]
-
-        target.pose.position.x = goal_position_base_frame[0]
-        target.pose.position.y = -goal_position_base_frame[1]
+#         print("Original target: ({}, {}, {})".format(target.pose.position.x,
+#                                                      target.pose.position.y,
+#                                                      sup.get_yaw_from_quat(target.pose.orientation)))
+#
+#         print("New target: ({}, {}, {})".format(target_quat.pose.position.x,
+#                                                 target_quat.pose.position.y,
+#                                                 sup.get_yaw_from_quat(target_quat.pose.orientation)))
+#         print(" ")
 
         self.target_pub.publish(target)
 

@@ -1,3 +1,4 @@
 # Example
-data/raw/shapes_250 -1
-#data/raw/shapes_500_wo_heading 250
+data/raw/office_100 -1
+data/raw/shapes_100 -1
+data/raw/simple_100 -1
