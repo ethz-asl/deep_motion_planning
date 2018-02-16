@@ -9,6 +9,8 @@ import time
 import os
 import math
 import copy
+import csv
+from datetime import datetime
 
 # Messages
 from std_msgs.msg import Float32MultiArray
@@ -39,8 +41,24 @@ class DeepMotionPlanner():
     self.send_motion_commands = True
     self.base_position = None
     self.base_orientation = None
-    self.max_laser_range = 30.0
+    self.max_laser_range = 20.0
     self.num_subsampled_scans = 36
+    self.num_raw_laser_scans = 1080
+#     self.column_line = ['count'] + \
+#                        ['laser_raw' + str(i) for i in range(self.num_raw_laser_scans)] + \
+#                        ['target_global_frame_x', 'target_global_frame_y', 'target_global_frame_yaw',
+#                         'robot_pose_global_frame_x', 'robot_pose_global_frame_y', 'robot_pose_global_frame_yaw'] + \
+#                        ['laser_input_model' + str(i) for i in range(self.num_subsampled_scans)] + \
+#                        ['goal_distance', 'goal_angle']
+#
+#     date_str = datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')
+#     self.storage_path = os.path.join('/home/pfmark/Desktop/dump', date_str)
+#     print("Logging under: {}".format(self.storage_path))
+#     os.mkdir(self.storage_path)
+#
+#     self.output_file = open(os.path.join(self.storage_path, 'logging_data.csv'), 'wb')
+#     self.writer= csv.writer(self.output_file, delimiter=',')
+#     self.writer.writerow(self.column_line)
 
     # Load various ROS parameters
     if not rospy.has_param('~model_path'):
@@ -119,6 +137,8 @@ class DeepMotionPlanner():
     with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints) as tf_wrapper:
       next_call = time.time()
       # Stop if the interrupt is requested
+      cnt = 1
+
       while not self.interrupt_event.is_set():
 
         # Run processing with the correct frequency
@@ -144,7 +164,7 @@ class DeepMotionPlanner():
         scan_msg = copy.copy(self.last_scan)
         self.scan_lock.release()
 
-        cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans, perception_radius = 30.0)
+        cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans, perception_radius = 100.0)
 
         # Convert scans to numpy array
         cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
@@ -178,7 +198,7 @@ class DeepMotionPlanner():
         transformed_angle = sup.transform_target_angle(angle, norm_angle=np.pi)
         transformed_norm = sup.transform_target_distance(norm, norm_range=self.max_laser_range)
 
-        data = np.stack((transformed_angle, transformed_norm, goal[2]))
+        data = np.stack((transformed_norm, transformed_angle, goal[2]))
 #         data = np.stack((angle, norm, goal[2]))
 
         # Publish the goal pose fed into the network
@@ -187,6 +207,19 @@ class DeepMotionPlanner():
         self.input_goal_pub.publish(goal_msg)
 
         input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2]
+
+        (base_position,base_orientation) = self.transform_listener.lookupTransform('/map', '/base_link', rospy.Time())
+
+#         target_orientation = self.target_pose.target_pose.pose.orientation
+#
+#         new_row = [cnt] + \
+#                   cropped_scans + \
+#                   [self.target_pose.target_pose.pose.position.x, self.target_pose.target_pose.pose.position.y, sup.get_yaw_from_quat(target_orientation)] + \
+#                   [base_position[0], base_position[1], tf.transformations.euler_from_quaternion(base_orientation)[2]] + \
+#                   list(transformed_scans.tolist()[0]) + \
+#                   data.tolist()[0:2]
+#         self.writer.writerow(new_row)
+#         cnt += 1
 
         linear_x, angular_z = tf_wrapper.inference(input_data)
 
