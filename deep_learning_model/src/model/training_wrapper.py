@@ -27,8 +27,10 @@ class TrainingWrapper():
     self.runners = None
     self.sess = None
     self.custom_data_runner = None
-    self.eval_n_elements = 60000
+    self.eval_n_elements = 20000
     self.eval_batch_size = 1024
+    self.max_perception_radius = 20.0
+    self.save_frequency = 20000
 
   def __enter__(self):
     return self
@@ -53,7 +55,6 @@ class TrainingWrapper():
     """Check if the array a has the correct number of rows. In case it is to small pad it with zeros"""
     if a.shape[0] < rows:
       a = np.concatenate((a, np.zeros((rows-a.shape[0], a.shape[1]))), axis=0)
-
     return a
 
   def run(self):
@@ -144,7 +145,7 @@ class TrainingWrapper():
 
       logger.info('Load the evaluation data')
       (X_eval,Y_eval) = DataHandler(self.args.datafile_eval, self.eval_n_elements,
-          shuffle=False, laser_subsampling=True).next_batch()
+          shuffle=False, laser_subsampling=True, perception_radius=self.max_perception_radius).next_batch()
       X_eval = self.check_extend(X_eval, np.ceil(self.eval_n_elements / self.eval_batch_size) * self.eval_batch_size)
 
       loss_train = 0.0
@@ -207,7 +208,7 @@ class TrainingWrapper():
           eval_summary_writer.add_summary(summary_str, step)
           eval_summary_writer.flush()
 
-        if step > 0 and step % 10000 == 0:
+        if step > 0 and step % self.save_frequency == 0:
           # Save a checkpoint
           logger.info('Save model snapshot')
           filename = os.path.join(storage_path, 'snap')
@@ -220,6 +221,9 @@ class TrainingWrapper():
       logger.info('Save final model snapshot')
       filename = os.path.join(storage_path, 'final')
       saver.save(self.sess, filename)
+
+      weights_store, biases_store = self.sess.run([weights_node, biases_node])
+      pickle.dump((weights_store, biases_store), open(os.path.join(storage_path, 'variables_final.p'), 'wb'))
 
       # Save the model with weights in one file
       # This will only capture the operations used to generate the prediction. It also
