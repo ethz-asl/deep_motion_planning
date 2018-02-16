@@ -1,21 +1,24 @@
-.PHONY: clean data lint requirements sync_data_to_s3 sync_data_from_s3
+.PHONY: requirements data train eval sync-gpu train-gpu clean tensorboard
 
 #################################################################################
 # GLOBALS                                                                       #
 #################################################################################
 
-BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
-
-#################################################################################
-# COMMANDS                                                                      #
-#################################################################################
-
-DATASET = eval_300
-DATASET_EVAL = eval_200
+DATASET = combined_office_250_shapes_250
+DATASET_EVAL = eval_300
 
 # Makefile arguments
 GPU_MACHINE = lynx
 USERNAME = pfmark
+
+# Training parameters
+LEARNING_RATE = 0.0001
+TRAINING_STEPS = 400000
+BATCH_SIZE = 128
+
+#################################################################################
+# COMMANDS                                                                      #
+#################################################################################
 
 requirements:
 	pip install -q -r requirements.txt
@@ -26,7 +29,7 @@ data:
 train:
 	python src/model/train_model.py data/processed/$(DATASET).h5 \
 				 													data/processed/$(DATASET_EVAL).h5 \
-				 													-l 0.0001 -s 200000 -b 128 --mail
+				 													-l $(LEARNING_RATE) -s $(TRAINING_STEPS) -b $(BATCH_SIZE) --mail
 
 eval:
 	python src/model/predict_model.py -c reports/evaluation.csv data/processed/$(DATASET_EVAL).h5 \
