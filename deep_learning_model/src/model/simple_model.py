@@ -11,7 +11,7 @@ import tensorflow.contrib as contrib
 import numpy as np
 
 # Give the model a descriptive name
-NAME = 'fc_36_laser_transform'
+NAME = 'fc_36_250_office_250_shapes'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 36
@@ -25,13 +25,12 @@ CMD_SIZE = 2
 N_LASER_MEASUREMENTS = 1080
 MEASUREMENTS_PER_SLICE = N_LASER_MEASUREMENTS / N_RANGE_FINDINGS
 
-LOWER_ACTION_LIMITS = np.array([-0.4, -np.pi])
-UPPER_ACTION_LIMITS = np.array([0.9, np.pi])
+LOWER_ACTION_LIMITS = np.array([-0.4, -np.pi / 2.])
+UPPER_ACTION_LIMITS = np.array([0.9, np.pi / 2.])
 
 # Helper functions
 def exp_transform(distance, decay_factor = 0.2):
   return np.exp(-decay_factor*distance)
-
 
 def get_laser_data_states(laser_data, n_laser_per_slice):
   """
@@ -50,7 +49,6 @@ def get_pose_data_states(pose_data, goal):
   position_data_state = 2*doExponentialTransform(getDistance(pose_data.position, goal.position)) - 1
   orientation_to_goal_data_state = getRelativeAngleToGoal(pose_data.position, pose_data.orientation, goal.position)/np.pi
   return [position_data_state] + [orientation_to_goal_data_state]
-
 
 def learning_rate(initial):
   """
@@ -76,7 +74,6 @@ def _conv_layer(input, weights, biases, conv_stride_length=1, padding="SAME", na
   if summary:
     tf.summary.histogram(name, activations)
   return activations
-
 
 def _fc_layer(input, weights, biases, use_activation=False, name="fc", summary=False):
   """
@@ -115,7 +112,6 @@ def _get_bias_variable(shape, name, regularizer=None,
   if summary:
     tf.summary.histogram(name, var)
   return var
-
 
 def inference(data, keep_prob, sample_size, training=True, reuse=False, regularization_weight=0.001, output_name='prediction'):
   """
