@@ -87,7 +87,7 @@ class TensorflowWrapper():
                        self.keep_prob_placeholder: 1.0}
           prediction = self.sess.run(self.model_inference, feed_dict=feed_dict)[0]
           std = 0.1
-          return (prediction[0] + np.random.normal(0, std), prediction[1] + + np.random.normal(0, std))
+          return (prediction[0] + np.random.normal(0, std), prediction[1] + np.random.normal(0, std))
 
 
 
