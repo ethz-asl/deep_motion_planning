@@ -1,0 +1,15 @@
+<package format="2">
+  <name>evaluation_tools</name>
+  <version>0.0.0</version>
+  <description>Evaluation tools for maps and trajectories used in deep end-to-end planning</description>
+  <maintainer email="pfmark@ethz.ch">pfmark</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>catkin_simple</buildtool_depend>
+  <depend>rospy</depend>
+
+  <export>
+
+  </export>
+</package>
