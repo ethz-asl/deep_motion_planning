@@ -11,7 +11,7 @@ import support as sup
 
 class FastDataHandler():
   """Class to load data from HDF5 storages in a random and chunckwise manner"""
-  def __init__(self, filepath, batchsize = 16, chunksize=None, max_perception_radius=20.0,
+  def __init__(self, filepath, batchsize = 16, chunksize=None, max_perception_radius=30.0,
                mean_filter_size=5, laser_subsampling=False, num_dist_values = 36):
     self.filepath = filepath
     self.chunksize = chunksize
@@ -180,9 +180,9 @@ class FastDataHandler():
 
           # Concatenate data: laser, goal angle, goal distance, goal heading
           if self.use_odom_vel:
-            data = np.concatenate((laser, norm, angle, goal[:,2].reshape([self.batchsize,1]), odom_vel), axis=1)
+            data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1]), odom_vel), axis=1)
           else:
-            data = np.concatenate((laser, norm, angle, goal[:,2].reshape([self.batchsize,1])), axis=1)
+            data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1])), axis=1)
 
           yield (data.copy(), chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values)
           current_index += self.batchsize

@@ -5,7 +5,7 @@ import support as sup
 
 class DataHandler():
   """Class to load data from HDF5 storages in a random and chunkwise manner"""
-  def __init__(self, filepath, chunksize=1000, shuffle = True, laser_subsampling = False, num_dist_values = 36, perception_radius=20.0):
+  def __init__(self, filepath, chunksize=1000, shuffle = True, laser_subsampling = False, num_dist_values = 36, perception_radius=30.0):
     self.filepath = filepath
     self.chunksize = chunksize
     self.shuffle = shuffle
@@ -122,8 +122,8 @@ class DataHandler():
 
     # Concatenate data: laser, goal angle, goal distance, goal heading
     if self.use_odom_vel:
-      data = np.concatenate((laser, norm, angle, goal[:,2].reshape([self.chunksize, 1]), odom_vel), axis=1)
+      data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1]), odom_vel), axis=1)
     else:
-      data = np.concatenate((laser,norm, angle, goal[:,2].reshape([self.chunksize, 1])), axis=1)
+      data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1])), axis=1)
 
     return (data.copy(), df.iloc[:, cmd_columns].copy(deep=True).values)

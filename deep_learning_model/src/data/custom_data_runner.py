@@ -17,7 +17,7 @@ INPUT_SIZE = 38
 
 class CustomDataRunner():
   """Class to manage threads which fill a queue of data"""
-  def __init__(self, filepath, batch_size, chunksize, max_perception_radius=20.0):
+  def __init__(self, filepath, batch_size, chunksize, max_perception_radius=30.0):
     with tf.device("/cpu:0"):
       self.batch_size = batch_size
       self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_subsampling=True, max_perception_radius=max_perception_radius)

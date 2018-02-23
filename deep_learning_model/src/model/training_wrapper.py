@@ -29,7 +29,7 @@ class TrainingWrapper():
     self.custom_data_runner = None
     self.eval_n_elements = 20000
     self.eval_batch_size = 1024
-    self.max_perception_radius = 20.0
+    self.max_perception_radius = 30.0
     self.save_frequency = 20000
 
   def __enter__(self):
@@ -72,7 +72,7 @@ class TrainingWrapper():
       self.sess = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=8))
 
       logger.info('Create the data runner for the input data')
-      self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**14)
+      self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**14, max_perception_radius=self.max_perception_radius)
       data_batch, cmd_batch = self.custom_data_runner.get_inputs()
 
       logger.info('Data batch size: {}'.format(data_batch.shape))
@@ -111,7 +111,7 @@ class TrainingWrapper():
       eval_summary_op = tf.summary.merge([eval_loss, eval_loss_lin, eval_loss_ang])
 
       # Saver for model snapshots
-      saver = tf.train.Saver()
+      saver = tf.train.Saver(max_to_keep=20)
 
       self.sess.run(tf.global_variables_initializer())
 
