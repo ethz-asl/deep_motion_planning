@@ -4,6 +4,7 @@ It can be used as template for a completely new model and is imported
 in the training script
 """
 import logging
+import cPickle as pickle
 
 import tensorflow as tf
 from tensorflow.contrib.layers import batch_norm, fully_connected, conv2d, xavier_initializer_conv2d, xavier_initializer, l1_regularizer
@@ -11,7 +12,7 @@ import tensorflow.contrib as contrib
 import numpy as np
 
 # Give the model a descriptive name
-NAME = 'fc_36_250_office_250_shapes'
+NAME = 'fc_36_combined'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 36
@@ -113,7 +114,7 @@ def _get_bias_variable(shape, name, regularizer=None,
     tf.summary.histogram(name, var)
   return var
 
-def inference(data, keep_prob, sample_size, training=True, reuse=False, regularization_weight=0.001, output_name='prediction'):
+def inference(data, keep_prob, sample_size, training=True, reuse=False, regularization_weight=0.001, output_name='prediction', filename_init=None):
   """
   Define the deep neural network used for inference
   """
@@ -127,24 +128,40 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
   n_hidden2 = 300
   n_hidden3 = 100
 
-  with tf.variable_scope('Weights', reuse=tf.AUTO_REUSE):
-     weights = {'h1' : _get_weight_variable(shape=[INPUT_SIZE, n_hidden1], name='h1', regularizer=None,
-                                            initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
-                                            summary=True, trainable=training),
-                'h2' : _get_weight_variable(shape=[n_hidden1, n_hidden2], name='h2', regularizer=None,
-                                            initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
-                                            summary=True, trainable=training),
-                'h3' : _get_weight_variable(shape=[n_hidden2, n_hidden3], name='h3', regularizer=None,
-                                            initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
-                                            summary=True, trainable=training),
-                'out' : _get_weight_variable(shape=[n_hidden3, CMD_SIZE], name='out', regularizer=None,
-                                            initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
-                                            summary=True, trainable=training)}
-  with tf.variable_scope('Biases', reuse=tf.AUTO_REUSE):
-    biases = {'b1' : _get_bias_variable(shape=[n_hidden1], name='b1', trainable=training),
-              'b2' : _get_bias_variable(shape=[n_hidden2], name='b2', trainable=training),
-              'b3' : _get_bias_variable(shape=[n_hidden3], name='b3', trainable=training),
-              'out' : _get_bias_variable(shape=[CMD_SIZE], name='out', trainable=training)}
+  if filename_init is None:
+    with tf.variable_scope('Weights', reuse=tf.AUTO_REUSE):
+       weights = {'h1' : _get_weight_variable(shape=[INPUT_SIZE, n_hidden1], name='h1', regularizer=None,
+                                              initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                                              summary=True, trainable=training),
+                  'h2' : _get_weight_variable(shape=[n_hidden1, n_hidden2], name='h2', regularizer=None,
+                                              initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                                              summary=True, trainable=training),
+                  'h3' : _get_weight_variable(shape=[n_hidden2, n_hidden3], name='h3', regularizer=None,
+                                              initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                                              summary=True, trainable=training),
+                  'out' : _get_weight_variable(shape=[n_hidden3, CMD_SIZE], name='out', regularizer=None,
+                                              initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                                              summary=True, trainable=training)}
+    with tf.variable_scope('Biases', reuse=tf.AUTO_REUSE):
+      biases = {'b1' : _get_bias_variable(shape=[n_hidden1], name='b1', trainable=training),
+                'b2' : _get_bias_variable(shape=[n_hidden2], name='b2', trainable=training),
+                'b3' : _get_bias_variable(shape=[n_hidden3], name='b3', trainable=training),
+                'out' : _get_bias_variable(shape=[CMD_SIZE], name='out', trainable=training)}
+  else:
+    print("Initializing weights from '{}'".format(filename_init))
+    param_data = pickle.load(open(filename_init,"rb"))
+    weights = param_data[0]
+    biases = param_data[1]
+    with tf.variable_scope('Weights'):
+      weights = {'h1' : tf.Variable(weights['h1'], name = 'h1'),
+                 'h2' : tf.Variable(weights['h2'], name = 'h2'),
+                 'h3' : tf.Variable(weights['h3'], name = 'h3'),
+                 'out' : tf.Variable(weights['out'], name = 'out')}
+    with tf.variable_scope('Biases'):
+      biases = {'b1' : tf.Variable(biases['b1'], name = 'b1'),
+                'b2' : tf.Variable(biases['b2'], name = 'b2'),
+                'b3' : tf.Variable(biases['b3'], name = 'b3'),
+                'out' : tf.Variable(biases['out'], name = 'out')}
 
 
   hidden_layer1 = tf.nn.tanh(tf.add(tf.matmul(data, weights['h1']), biases['b1']))

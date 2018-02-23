@@ -19,6 +19,7 @@ from geometry_msgs.msg import Twist, PoseStamped, Point, Quaternion
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
 from sensor_msgs.msg import Joy
 from nav_msgs.msg import Path
+import rospkg
 # print("Current path: {}".format(os.path.dirname(os.path.abspath(__file__))))
 import support as sup
 
@@ -134,7 +135,9 @@ class DeepMotionPlanner():
     runs until the interrupt_event is set
     """
     # Get a handle for the tensorflow interface
-    with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints) as tf_wrapper:
+    with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints,
+                           filename_weights=os.path.join(rospkg.RosPack().get_path('deep_motion_planner'),
+                                                         'models/reinforcement_learning/weights_actor900.p')) as tf_wrapper:
       next_call = time.time()
       # Stop if the interrupt is requested
       cnt = 1
@@ -198,7 +201,7 @@ class DeepMotionPlanner():
         transformed_angle = sup.transform_target_angle(angle, norm_angle=np.pi)
         transformed_norm = sup.transform_target_distance(norm, norm_range=self.max_laser_range)
 
-        data = np.stack((transformed_norm, transformed_angle, goal[2]))
+        data = np.stack((transformed_angle, transformed_norm, goal[2]))
 #         data = np.stack((angle, norm, goal[2]))
 
         # Publish the goal pose fed into the network
@@ -238,7 +241,7 @@ class DeepMotionPlanner():
     Check if the position and orientation are close enough to the target.
     If this is the case, set the current goal to succeeded.
     """
-    position_tolerance = 0.1
+    position_tolerance = 0.2
     orientation_tolerance = 10.0 #0.1
     if abs(target[0]) < position_tolerance \
         and abs(target[1]) < position_tolerance \
