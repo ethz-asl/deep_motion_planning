@@ -12,7 +12,7 @@ import tensorflow.contrib as contrib
 import numpy as np
 
 # Give the model a descriptive name
-NAME = 'fc_36_combined'
+NAME = 'fc_36_combined_2k'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 36
