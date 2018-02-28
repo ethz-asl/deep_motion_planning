@@ -8,6 +8,7 @@ include "window.inc"
 interval_sim            40
 quit_time                 0
 resolution                0.02
+speedup  -1
 
 show_clock                1
 show_clock_interval     100
