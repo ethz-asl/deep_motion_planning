@@ -66,11 +66,12 @@ class DeepMotionPlanner():
       rospy.logerr('Missing parameter: ~model_path')
       exit()
 
-    self.laser_scan_stride = rospy.get_param('~laser_scan_stride', 1) # Take every ith element
-    self.n_laser_scans = rospy.get_param('~n_laser_scans', 1080) # Cut n elements from the center to adjust the length
+    self.laser_scan_stride = rospy.get_param('~laser_scan_stride', default=1) # Take every ith element
+    self.n_laser_scans = rospy.get_param('~n_laser_scans', default=1080) # Cut n elements from the center to adjust the length
     self.model_path = rospy.get_param('~model_path')
+    self.pickle_weights_path = rospy.get_param('~pickle_weights_path', default=None)
     self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
-    self.use_checkpoints = rospy.get_param('~use_checkpoints', False)
+    self.use_checkpoints = rospy.get_param('~use_checkpoints', default=False)
     if not os.path.exists(self.model_path):
       rospy.logerr('Model path does not exist: {}'.format(self.model_path))
       rospy.logerr('Please check the parameter: {}'.format(rospy.resolve_name('~model_path')))
@@ -136,8 +137,7 @@ class DeepMotionPlanner():
     """
     # Get a handle for the tensorflow interface
     with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints,
-                           filename_weights=os.path.join(rospkg.RosPack().get_path('deep_motion_planner'),
-                                                         'models/reinforcement_learning/weights_actor900.p')) as tf_wrapper:
+                           filename_weights=self.pickle_weights_path) as tf_wrapper:
       next_call = time.time()
       # Stop if the interrupt is requested
       cnt = 1
