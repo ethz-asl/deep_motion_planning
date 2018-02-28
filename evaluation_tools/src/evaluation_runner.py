@@ -16,21 +16,19 @@ from geometry_msgs.msg import PoseStamped, Pose2D
 from actionlib_msgs.msg import GoalStatus
 import std_srvs.srv
 
-# filename = 'simple_10.csv'
-# mission_data = pd.read_csv(os.path.join('../mission_files/simple', filename))
-
 
 class EvaluationRunner():
 
   def __init__(self):
-#     mission_file = rospy.get_param('~mission_file')
-#     if not os.path.exists(mission_file):
-#       rospy.logerr('Mission file not found: {}'.format("mission_file"))
-#       exit()
-    self.mission_data = pd.read_csv("shapes_100.csv")
+    mission_file = rospy.get_param('~mission_file')
+    use_deep_motion_planner = rospy.get_param('~deep_motion_planner', default=True)
+    if not os.path.exists(mission_file):
+      rospy.logerr('Mission file not found: {}'.format("mission_file"))
+      exit()
+    self.mission_data = pd.read_csv(mission_file)
     self.trajectory_idx = 0
     self.command_start = rospy.Time.now().to_sec()
-    self.command_timeout_threshold = 120.0
+    self.command_timeout_threshold = 300.0
     self.current_target = [0, 0, 0]
     self.crash_time = rospy.Time.now().to_sec()
     self.stalled_old= 0
@@ -56,9 +54,14 @@ class EvaluationRunner():
     rospy.wait_for_service('/reset_positions')
 
     # Set up action client
-    self.navigation_client = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
-    while not self.navigation_client.wait_for_server(rospy.Duration(5)):
-      rospy.loginfo('Waiting for deep_move_base action server')
+    if use_deep_motion_planner:
+      self.navigation_client = actionlib.SimpleActionClient('deep_move_base', MoveBaseAction)
+      while not self.navigation_client.wait_for_server(rospy.Duration(5)):
+        rospy.loginfo('Waiting for deep_move_base action server')
+    else:
+      self.navigation_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+      while not self.navigation_client.wait_for_server(rospy.Duration(5)):
+        rospy.loginfo('Waiting for move_base action server')
 
     if len(self.mission_data) > 0:
       rospy.loginfo("Starting evaluation mission with {} trajectories.".format(len(self.mission_data)))
@@ -71,7 +74,7 @@ class EvaluationRunner():
     """
     Send the next command in the mission list
     """
-    rospy.loginfo("Running trajectory number {}.".format(self.trajectory_idx))
+    rospy.loginfo("Running trajectory number {} / {}.".format(self.trajectory_idx, len(self.mission_data)))
 
     rospy.loginfo("{:.3f} % success, \t{:.3f} % timeout, \t{:.3f} % crash".format(100*(self.n_success / float(np.maximum(self.trajectory_idx, 1))),
                                                                                   100*(self.n_timeout / float(np.maximum(self.trajectory_idx, 1))),
@@ -135,6 +138,7 @@ class EvaluationRunner():
       rospy.loginfo("Timeout for command execution")
       self.n_timeout += 1
       self.navigation_client.cancel_goal()
+      self.abort_pub.publish(Empty())
       return
 
     # Compute the relative goal pose within the robot base frame
@@ -219,6 +223,7 @@ class EvaluationRunner():
       rospy.loginfo("Robot crashed. Continuing with next trajectory.")
       self.n_crash += 1
       self.trajectory_idx += 1
+      self.abort_pub.publish(Empty())
       self.__reset_simulation__()
       self.__send_next_command__()
     self.stalled_old = data.data
