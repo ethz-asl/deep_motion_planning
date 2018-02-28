@@ -90,7 +90,7 @@ class DataCapture():
     odom_time = data.header.stamp.to_sec()
     rospy.logdebug("ROS time: {} \tOdometry time: {}".format(current_time, odom_time))
     if current_time - odom_time > 0.01:
-      rospy.logwarn("Odometry message delayed by {}".format(current_time - odom_time))
+      rospy.logdebug("Odometry message delayed by {}".format(current_time - odom_time))
 
 
   def sync_callback(self, scan, cmd, odom, target):
