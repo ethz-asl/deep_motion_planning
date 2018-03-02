@@ -12,7 +12,7 @@ import tensorflow.contrib as contrib
 import numpy as np
 
 # Give the model a descriptive name
-NAME = 'fc_36_combined_2k'
+NAME = 'fc_36_shapes_1000_dropout'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 36
@@ -165,13 +165,12 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
 
 
   hidden_layer1 = tf.nn.tanh(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
+  hidden_layer1 = tf.nn.dropout(hidden_layer1, keep_prob=keep_prob, name='dropout_1')
   hidden_layer2 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer1, weights['h2']), biases['b2']))
   hidden_layer3 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer2, weights['h3']), biases['b3']))
   prediction_norm = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']), name='normalized_output')
 
   # De-normalize output prediction
-  prediction = prediction_norm
-
   range_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS - LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
   avg_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS + LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
   prediction = tf.add(tf.multiply(prediction_norm, range_limits), avg_limits, name=output_name)
