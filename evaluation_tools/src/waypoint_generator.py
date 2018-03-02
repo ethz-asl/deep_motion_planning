@@ -9,6 +9,7 @@ import pandas as pd
 import pylab as pl
 import logging
 import time
+import argparse
 from datetime import datetime
 
 logger = logging.getLogger('waypoint_generator')
@@ -81,8 +82,8 @@ column_line = ['sample_number', 'start_x', 'start_y', 'start_yaw', 'final_x', 'f
 
 date_str = datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')
 storage_path = args.storage_path
-if not os.path.exists(os.path.join(storage_path, map_name)):
-  os.path.join(storage_path, map_name)
+if not os.path.exists(storage_path):
+  os.mkdir(storage_path)
 
 output_file = open(os.path.join(storage_path, map_name + '_' + str(n_trajectories) + '.csv'), 'w')
 writer= csv.writer(output_file, delimiter=',')
