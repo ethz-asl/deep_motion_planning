@@ -27,10 +27,12 @@ class TrainingWrapper():
     self.runners = None
     self.sess = None
     self.custom_data_runner = None
-    self.eval_n_elements = 20000
+    self.eval_n_elements = 1000
     self.eval_batch_size = 1024
     self.max_perception_radius = 30.0
-    self.save_frequency = 20000
+    self.save_frequency = 40000
+    self.training_data_handler = DataHandler(self.args.datafile_train, self.args.batch_size,
+                                             shuffle=True, laser_subsampling=True, max_perception_radius=self.max_perception_radius)
 
   def __enter__(self):
     return self
@@ -68,8 +70,10 @@ class TrainingWrapper():
 
       # Define the used machine learning model
       global_step, learning_rate = model.learning_rate(self.args.learning_rate)
+      config = tf.ConfigProto(gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5), device_count = {'GPU': 1},
+                              intra_op_parallelism_threads = 8)
 
-      self.sess = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=8))
+      self.sess = tf.Session(config=config)
 
       logger.info('Create the data runner for the input data')
       self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**14, max_perception_radius=self.max_perception_radius)
@@ -94,7 +98,7 @@ class TrainingWrapper():
       # This model is saved with the trained weights and can direclty be executed
       exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE, CMD_SIZE)
       model_inference, _, _ = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
-          training=False, reuse=True, output_name='model_inference')
+                                              training=False, reuse=True, output_name='model_inference')
 
       # Variables to use in the summary (shown in tensorboard)
       train_loss = tf.summary.scalar('loss', loss)
@@ -143,10 +147,10 @@ class TrainingWrapper():
           logger.warning('No weights are loaded!')
           logger.warning('File does not exist: {}'.format(self.args.weight_initialize))
 
-      logger.info('Load the evaluation data')
-      (X_eval,Y_eval) = DataHandler(self.args.datafile_eval, self.eval_n_elements,
-          shuffle=False, laser_subsampling=True, perception_radius=self.max_perception_radius).next_batch()
-      X_eval = self.check_extend(X_eval, np.ceil(self.eval_n_elements / self.eval_batch_size) * self.eval_batch_size)
+#       logger.info('Load the evaluation data')
+#       (X_eval,Y_eval) = DataHandler(self.args.datafile_eval, self.eval_n_elements,
+#           shuffle=False, laser_subsampling=True, max_perception_radius=self.max_perception_radius).next_batch()
+#       X_eval = self.check_extend(X_eval, np.ceil(self.eval_n_elements / self.eval_batch_size) * self.eval_batch_size)
 
       loss_train = 0.0
       # Perform all training steps
@@ -161,6 +165,10 @@ class TrainingWrapper():
 
         duration = time.time() - start_time
 
+#         ts_load = time.time()
+#         a, b = self.training_data_handler.next_batch()
+#         print("Loading data took {} ms".format((time.time() - ts_load) * 1000))
+
         # Report every 100 steps
         if step > 0 and step % 100 == 0:
           # Print status to stdout.
@@ -173,40 +181,40 @@ class TrainingWrapper():
           # Replace the durations in fifo fashion
           duration_vector[((step % self.args.eval_steps)//100)] = duration
 
-        # Evaluatie the model
-        if step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
-          start_eval = time.time()
-
-          # Create an empty array, that has the correct size for to hold all predictions
-          eval_predictions = np.zeros([X_eval.shape[0],2], dtype=np.float)
-
-          # Evaluate the data in batches and capture the predictions
-          for index in range(X_eval.shape[0] // self.eval_batch_size):
-            start_index = index*self.eval_batch_size
-            end_index = (index+1)*self.eval_batch_size
-            feed_dict = {
-                eval_data_placeholder: X_eval[start_index:end_index,:-1],
-                keep_prob_placeholder: 1.0
-                }
-            eval_predictions[start_index:end_index,:] = self.sess.run([eval_prediction],
-                feed_dict=feed_dict)[0]
-
-          # Finally evaluate the predictions and compute the scores
-          feed_dict = {
-              eval_predictions_placeholder: eval_predictions[:self.eval_n_elements,:],
-              eval_cmd_placeholder:  Y_eval,
-              keep_prob_placeholder: 1.0
-              }
-
-          loss_value, loss_split_value, summary_str = self.sess.run([evaluation,
-            evaluation_split, eval_summary_op], feed_dict=feed_dict)
-
-          duration_eval = time.time() - start_eval
-
-          logger.info('Evaluation: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
-
-          eval_summary_writer.add_summary(summary_str, step)
-          eval_summary_writer.flush()
+#         # Evaluate the model
+#         if step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
+#           start_eval = time.time()
+#
+#           # Create an empty array, that has the correct size for to hold all predictions
+#           eval_predictions = np.zeros([X_eval.shape[0],2], dtype=np.float)
+#
+#           # Evaluate the data in batches and capture the predictions
+#           for index in range(X_eval.shape[0] // self.eval_batch_size):
+#             start_index = index*self.eval_batch_size
+#             end_index = (index+1)*self.eval_batch_size
+#             feed_dict = {
+#                 eval_data_placeholder: X_eval[start_index:end_index,:-1],
+#                 keep_prob_placeholder: 1.0
+#                 }
+#             eval_predictions[start_index:end_index,:] = self.sess.run([eval_prediction],
+#                 feed_dict=feed_dict)[0]
+#
+#           # Finally evaluate the predictions and compute the scores
+#           feed_dict = {
+#               eval_predictions_placeholder: eval_predictions[:self.eval_n_elements,:],
+#               eval_cmd_placeholder:  Y_eval,
+#               keep_prob_placeholder: 1.0
+#               }
+#
+#           loss_value, loss_split_value, summary_str = self.sess.run([evaluation,
+#             evaluation_split, eval_summary_op], feed_dict=feed_dict)
+#
+#           duration_eval = time.time() - start_eval
+#
+#           logger.info('Evaluation: loss = ({:.4f},{:.4f}) {:.3f} msec'.format(loss_split_value[0], loss_split_value[1], duration_eval/1e-3))
+#
+#           eval_summary_writer.add_summary(summary_str, step)
+#           eval_summary_writer.flush()
 
         if step > 0 and step % self.save_frequency == 0:
           # Save a checkpoint
