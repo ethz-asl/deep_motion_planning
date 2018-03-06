@@ -70,6 +70,7 @@ class DeepMotionPlanner():
     self.n_laser_scans = rospy.get_param('~n_laser_scans', default=1080) # Cut n elements from the center to adjust the length
     self.model_path = rospy.get_param('~model_path')
     self.pickle_weights_path = rospy.get_param('~pickle_weights_path', default=None)
+    self.use_pickle_weights = rospy.get_param('~use_pickle_weights', default=False)
     self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
     self.use_checkpoints = rospy.get_param('~use_checkpoints', default=False)
     if not os.path.exists(self.model_path):
@@ -136,8 +137,12 @@ class DeepMotionPlanner():
     runs until the interrupt_event is set
     """
     # Get a handle for the tensorflow interface
+    if self.use_pickle_weights:
+      filename_weights = self.pickle_weights_path
+    else:
+      filename_weights = None
     with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints,
-                           filename_weights=self.pickle_weights_path) as tf_wrapper:
+                           filename_weights=filename_weights) as tf_wrapper:
       next_call = time.time()
       # Stop if the interrupt is requested
       cnt = 1
@@ -258,6 +263,7 @@ class DeepMotionPlanner():
                                   rospy.Time())
     except (tf.LookupException, tf.ConnectivityException,
             tf.ExtrapolationException):
+      rospy.logwarn("Lookup exception in transform for relative target computation.")
       return None
 
     # Publish feedback (the current pose)
