@@ -21,7 +21,7 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 logger.setLevel(logging.INFO)
 
-plotting = False
+plotting = True
 
 def sample_initial_pose(x_range, y_range, grid_map):
   cell_occupied = True

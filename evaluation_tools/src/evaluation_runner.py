@@ -1,14 +1,16 @@
 import sys
 sys.path.insert(0, '/usr/local/lib/python2.7/dist-packages')
+
 import numpy as np
 import pandas as pd
 import os
+import csv
 import support as sup
-
 
 # ROS imports
 import rospy
 import actionlib
+import rospkg
 import tf
 from move_base_msgs.msg import MoveBaseAction
 from std_msgs.msg import Empty, Int8
@@ -20,12 +22,13 @@ import std_srvs.srv
 class EvaluationRunner():
 
   def __init__(self):
-    mission_file = rospy.get_param('~mission_file')
+    self.mission_file = rospy.get_param('~mission_file')
     use_deep_motion_planner = rospy.get_param('~deep_motion_planner', default=True)
-    if not os.path.exists(mission_file):
+    self.evaluation_info = rospy.get_param('~evaluation_info', default="map_network")
+    if not os.path.exists(self.mission_file):
       rospy.logerr('Mission file not found: {}'.format("mission_file"))
       exit()
-    self.mission_data = pd.read_csv(mission_file)
+    self.mission_data = pd.read_csv(self.mission_file)
     self.trajectory_idx = 0
     self.command_start = rospy.Time.now().to_sec()
     self.command_timeout_threshold = 300.0
@@ -80,15 +83,15 @@ class EvaluationRunner():
                                                                                   100*(self.n_timeout / float(np.maximum(self.trajectory_idx, 1))),
                                                                                   100*(self.n_crash / float(np.maximum(self.trajectory_idx, 1)))))
 
+    if self.trajectory_idx >= len(self.mission_data):
+      self.__write_result_to_file__()
+      rospy.loginfo("Mission Finished")
+      rospy.signal_shutdown("Mission Finished")
+
     self.__reset_robot_to_pose__([self.mission_data['start_x'][self.trajectory_idx],
                                   self.mission_data['start_y'][self.trajectory_idx],
                                   self.mission_data['start_yaw'][self.trajectory_idx]])
 
-    rospy.sleep(1.0)
-
-    if self.trajectory_idx >= len(self.mission_data):
-      rospy.loginfo("Mission Finished")
-      rospy.signal_shutdown("Mission Finished")
 
     target_coordinates = [self.mission_data['final_x'][self.trajectory_idx],
                           self.mission_data['final_y'][self.trajectory_idx],
@@ -191,6 +194,7 @@ class EvaluationRunner():
 
     self.trajectory_idx += 1
     if self.trajectory_idx >= len(self.mission_data):
+      self.__write_result_to_file__()
       rospy.loginfo("Mission finished")
       rospy.signal_shutdown("Maximum number of waypoints reached. Mission finished.")
 
@@ -237,4 +241,18 @@ class EvaluationRunner():
       reset_simulation()
     except rospy.ServiceException, e:
       print('Service call failed: {}'.format(e))
+
+
+  def __write_result_to_file__(self):
+    map_name = self.evaluation_info[:self.evaluation_info.find('_')]
+    file_name = self.evaluation_info + '_' + str(len(self.mission_data)) + '.csv'
+    storage_path = os.path.join(rospkg.RosPack().get_path('evaluation_tools'), 'evaluation_results', file_name)
+    rospy.loginfo("Writing results to '{}'".format(storage_path))
+    output_file = open(storage_path, 'w')
+    writer= csv.writer(output_file, delimiter=',')
+    writer.writerow(['map_name', 'num_trajectories', 'num_success', 'num_timeout', 'num_crash'])
+    writer.writerow([map_name, len(self.mission_data), self.n_success, self.n_timeout, self.n_crash])
+    output_file.flush()
+    output_file.close()
+
 
