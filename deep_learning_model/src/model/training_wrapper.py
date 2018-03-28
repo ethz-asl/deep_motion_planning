@@ -70,7 +70,7 @@ class TrainingWrapper():
 
       # Define the used machine learning model
       global_step, learning_rate = model.learning_rate(self.args.learning_rate)
-      config = tf.ConfigProto(gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5), device_count = {'GPU': 1},
+      config = tf.ConfigProto(gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2), device_count = {'GPU': 1},
                               intra_op_parallelism_threads = 8)
 
       self.sess = tf.Session(config=config)

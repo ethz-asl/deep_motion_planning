@@ -5,15 +5,16 @@ import support as sup
 
 class DataHandler():
   """Class to load data from HDF5 storages in a random and chunkwise manner"""
-  def __init__(self, filepath, chunksize=1000, shuffle = True, laser_subsampling = False, num_dist_values = 36, perception_radius=30.0):
+  def __init__(self, filepath, chunksize=1000, shuffle = True, laser_subsampling = False, num_dist_values = 36, max_perception_radius=30.0):
     self.filepath = filepath
     self.chunksize = chunksize
     self.shuffle = shuffle
-    self.perception_radius = perception_radius
+    self.perception_radius = max_perception_radius
     self.mean_filter_size = 5
     self.use_odom_vel = False
-    self.laser_subsampling = True
+    self.laser_subsampling = laser_subsampling
     self.num_dist_values = num_dist_values
+    self.current_chunk_idx = 0
 
     if not os.path.exists(filepath):
       raise IOError('File does not exists: {}'.format(filepath))
@@ -36,19 +37,19 @@ class DataHandler():
     @return Indices of the elements in the batch
     @rtype Generator
     """
-    current_index = 0
+    self.current_index = 0
     if self.shuffle:
       permutation = np.random.permutation(self.nrows)
     else:
       permutation = np.arange(self.nrows)
     while True:
-      yield permutation[current_index:current_index+self.chunksize]
-      current_index += self.chunksize
+      yield permutation[self.current_index:self.current_index+self.chunksize]
+      self.current_index += self.chunksize
 
       # We iterated over the entire dataset, so resample and reset
-      if (current_index + self.chunksize) > self.nrows:
+      if (self.current_index + self.chunksize) > self.nrows:
         permutation = np.random.permutation(self.nrows)
-        current_index = 0
+        self.current_index = 0
 
   def next_batch(self):
     """
@@ -127,3 +128,7 @@ class DataHandler():
       data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.chunksize, 1])), axis=1)
 
     return (data.copy(), df.iloc[:, cmd_columns].copy(deep=True).values)
+
+
+  def close(self):
+    pass
