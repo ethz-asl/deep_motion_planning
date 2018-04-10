@@ -12,7 +12,7 @@ import tensorflow.contrib as contrib
 import numpy as np
 
 # Give the model a descriptive name
-NAME = 'fc_36_shapes_1000_dropout'
+NAME = 'shapes_250_-04_06'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 36
@@ -26,7 +26,7 @@ CMD_SIZE = 2
 N_LASER_MEASUREMENTS = 1080
 MEASUREMENTS_PER_SLICE = N_LASER_MEASUREMENTS / N_RANGE_FINDINGS
 
-LOWER_ACTION_LIMITS = np.array([-0.4, -np.pi / 2.])
+LOWER_ACTION_LIMITS = np.array([-0.2, -np.pi / 2.])
 UPPER_ACTION_LIMITS = np.array([0.9, np.pi / 2.])
 
 # Helper functions
