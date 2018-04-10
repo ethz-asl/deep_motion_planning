@@ -29,7 +29,7 @@ def sample_initial_pose(x_range, y_range, grid_map):
     x = np.random.uniform(x_range[0], x_range[1])
     y = np.random.uniform(y_range[0], y_range[1])
     yaw = np.random.uniform(0, 2*np.pi)
-    cell_occupied = grid_map.area_occupied(np.array([x, y]), min_dist=0.4)
+    cell_occupied = grid_map.area_occupied(np.array([x, y]), min_dist=0.5)
 
   return np.array([x, y, yaw])
 
@@ -41,7 +41,7 @@ def sample_final_pose(x_range, y_range, initial_pose, min_distance, grid_map):
     x = np.random.uniform(x_range[0], x_range[1])
     y = np.random.uniform(y_range[0], y_range[1])
     yaw = np.random.uniform(0, 2*np.pi)
-    cell_occupied = grid_map.area_occupied(np.array([x, y]), min_dist=0.4)
+    cell_occupied = grid_map.area_occupied(np.array([x, y]), min_dist=0.3)
     distance = np.linalg.norm(np.array([x, y]) - initial_pose[0:2])
 
   return np.array([x, y, yaw])

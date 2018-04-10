@@ -125,8 +125,8 @@ class MissionControl():
     self.command_start = rospy.Time.now().to_sec()
 
     # Send the waypoint
-    self.navigation_client.send_goal(goal.action_goal.goal, self.__done_callback__, \
-            self.__active_callback__, self.__feedback_callback__)
+    self.navigation_client.send_goal(goal.action_goal.goal, self.__done_callback__,
+                                     self.__active_callback__, self.__feedback_callback__)
 
   def __goto_random__(self, parameters):
     """
@@ -137,7 +137,7 @@ class MissionControl():
     """
     # first call: Set the number of random waypoints
     if self.random_waypoint_number == 0:
-        self.random_waypoint_number = parameters[0]
+      self.random_waypoint_number = parameters[0]
 
     rospy.loginfo('Goto random waypoint: {} remaining'.format(self.random_waypoint_number))
 
@@ -160,7 +160,6 @@ class MissionControl():
     We compute the relative pose of the global target pose within the base frame and
     publish it as ROS topic
     """
-
     # Check if we reached the timeout
     if (rospy.Time.now().to_sec() - self.command_start) > self.command_timeout:
       rospy.loginfo('Timeout for command execution')
