@@ -38,13 +38,14 @@ class DeepMotionPlanner():
 
     self.target_pose = None
     self.last_scan = None
-    self.freq = 25.0
+    self.freq = 6.0
     self.send_motion_commands = True
     self.base_position = None
     self.base_orientation = None
     self.max_laser_range = 20.0
     self.num_subsampled_scans = 36
     self.num_raw_laser_scans = 1080
+    self.time_last_call = rospy.get_rostime()
 #     self.column_line = ['count'] + \
 #                        ['laser_raw' + str(i) for i in range(self.num_raw_laser_scans)] + \
 #                        ['target_global_frame_x', 'target_global_frame_y', 'target_global_frame_yaw',
@@ -150,96 +151,98 @@ class DeepMotionPlanner():
       while not self.interrupt_event.is_set():
 
         # Run processing with the correct frequency
-        next_call = next_call+1.0/self.freq
-        sleep_time = next_call - time.time()
-        if sleep_time > 0.0:
-          time.sleep(sleep_time)
-        else:
-          rospy.logerr('Missed control loop frequency')
+#         next_call = next_call+1.0/self.freq
+#         sleep_time = next_call - time.time()
+#         if sleep_time > 0.0:
+#           time.sleep(sleep_time)
+#         else:
+#           rospy.logerr('Missed control loop frequency')
 
-        # Make sure, we have goal
-        if not self._as.is_active():
-          continue
-        # Make sure, we received the first laser scan message
-        if not self.target_pose or not self.last_scan:
-          continue
-        # Get the relative target pose
-        target = self.compute_relative_target()
-        if not target:
-          continue
+        if rospy.get_rostime() - self.time_last_call >= rospy.Duration(1.0 / self.freq):
+          self.time_last_call = rospy.get_rostime()
+          # Make sure, we have goal
+          if not self._as.is_active():
+            continue
+          # Make sure, we received the first laser scan message
+          if not self.target_pose or not self.last_scan:
+            continue
+          # Get the relative target pose
+          target = self.compute_relative_target()
+          if not target:
+            continue
 
-        self.scan_lock.acquire()
-        scan_msg = copy.copy(self.last_scan)
-        self.scan_lock.release()
+          self.scan_lock.acquire()
+          scan_msg = copy.copy(self.last_scan)
+          self.scan_lock.release()
 
-        cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans, perception_radius = 100.0)
+          cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans, perception_radius = 100.0)
 
-        # Convert scans to numpy array
-        cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
-        transformed_scans = sup.transform_laser(cropped_scans_np, self.num_subsampled_scans)
+          # Convert scans to numpy array
+          cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
+          transformed_scans = sup.transform_laser(cropped_scans_np, self.num_subsampled_scans)
 
-        if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
-          rospy.logerr('Scan contained invalid float (nan or inf)')
+          if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
+            rospy.logerr('Scan contained invalid float (nan or inf)')
 
-        # Publish the scan data fed into the network
-        cropped_scan_msg = LaserScan()
-        cropped_scan_msg.header = scan_msg.header
-        cropped_scan_msg.angle_increment = scan_msg.angle_increment / self.laser_scan_stride
-        cropped_scan_msg.angle_min = -self.n_laser_scans * cropped_scan_msg.angle_increment / 2
-        cropped_scan_msg.angle_max = self.n_laser_scans * cropped_scan_msg.angle_increment / 2
-        cropped_scan_msg.time_increment = scan_msg.time_increment
-        cropped_scan_msg.scan_time = scan_msg.scan_time
-        cropped_scan_msg.scan_time = scan_msg.scan_time
-        cropped_scan_msg.range_min = scan_msg.range_min
-        cropped_scan_msg.range_max = scan_msg.range_max
-        cropped_scan_msg.ranges = cropped_scans
-        self.input_laser_pub.publish(cropped_scan_msg)
+          # Publish the scan data fed into the network
+          cropped_scan_msg = LaserScan()
+          cropped_scan_msg.header = scan_msg.header
+          cropped_scan_msg.angle_increment = scan_msg.angle_increment / self.laser_scan_stride
+          cropped_scan_msg.angle_min = -self.n_laser_scans * cropped_scan_msg.angle_increment / 2
+          cropped_scan_msg.angle_max = self.n_laser_scans * cropped_scan_msg.angle_increment / 2
+          cropped_scan_msg.time_increment = scan_msg.time_increment
+          cropped_scan_msg.scan_time = scan_msg.scan_time
+          cropped_scan_msg.scan_time = scan_msg.scan_time
+          cropped_scan_msg.range_min = scan_msg.range_min
+          cropped_scan_msg.range_max = scan_msg.range_max
+          cropped_scan_msg.ranges = cropped_scans
+          self.input_laser_pub.publish(cropped_scan_msg)
 
 
-        # Prepare the input vector, perform the inference on the model
-        # and publish a new command
-        goal = np.array(target)
-        angle = np.arctan2(goal[1],goal[0])
-        norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), self.max_laser_range)
+          # Prepare the input vector, perform the inference on the model
+          # and publish a new command
+          goal = np.array(target)
+          angle = np.arctan2(goal[1],goal[0])
+          norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), self.max_laser_range)
 
-        # Normalize / transform
-        transformed_angle = sup.transform_target_angle(angle, norm_angle=np.pi)
-        transformed_norm = sup.transform_target_distance(norm, norm_range=self.max_laser_range)
+          # Normalize / transform
+          transformed_angle = sup.transform_target_angle(angle, norm_angle=np.pi)
+          transformed_norm = sup.transform_target_distance(norm, norm_range=self.max_laser_range)
 
-        data = np.stack((transformed_angle, transformed_norm, goal[2]))
-#         data = np.stack((angle, norm, goal[2]))
+          data = np.stack((transformed_angle, transformed_norm, goal[2]))
+  #         data = np.stack((angle, norm, goal[2]))
 
-        # Publish the goal pose fed into the network
-        goal_msg = Float32MultiArray()
-        goal_msg.data = data
-        self.input_goal_pub.publish(goal_msg)
+          # Publish the goal pose fed into the network
+          goal_msg = Float32MultiArray()
+          goal_msg.data = data
+          self.input_goal_pub.publish(goal_msg)
 
-        input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2]
+          input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2]
 
-        (base_position,base_orientation) = self.transform_listener.lookupTransform('/map', '/base_link', rospy.Time())
+          (base_position,base_orientation) = self.transform_listener.lookupTransform('/map', '/base_link', rospy.Time())
 
-#         target_orientation = self.target_pose.target_pose.pose.orientation
-#
-#         new_row = [cnt] + \
-#                   cropped_scans + \
-#                   [self.target_pose.target_pose.pose.position.x, self.target_pose.target_pose.pose.position.y, sup.get_yaw_from_quat(target_orientation)] + \
-#                   [base_position[0], base_position[1], tf.transformations.euler_from_quaternion(base_orientation)[2]] + \
-#                   list(transformed_scans.tolist()[0]) + \
-#                   data.tolist()[0:2]
-#         self.writer.writerow(new_row)
-#         cnt += 1
+  #         target_orientation = self.target_pose.target_pose.pose.orientation
+  #
+  #         new_row = [cnt] + \
+  #                   cropped_scans + \
+  #                   [self.target_pose.target_pose.pose.position.x, self.target_pose.target_pose.pose.position.y, sup.get_yaw_from_quat(target_orientation)] + \
+  #                   [base_position[0], base_position[1], tf.transformations.euler_from_quaternion(base_orientation)[2]] + \
+  #                   list(transformed_scans.tolist()[0]) + \
+  #                   data.tolist()[0:2]
+  #         self.writer.writerow(new_row)
+  #         cnt += 1
 
-        linear_x, angular_z = tf_wrapper.inference(input_data)
+          linear_x, angular_z = tf_wrapper.inference(input_data)
 
-        cmd = Twist()
-        cmd.linear.x = linear_x
-        cmd.angular.z = angular_z
-        if self.send_motion_commands:
-          self.cmd_pub.publish(cmd)
-          self.publish_predicted_path(cmd)
+          cmd = Twist()
+          cmd.linear.x = linear_x
+          cmd.angular.z = angular_z
+          if self.send_motion_commands:
+            self.cmd_pub.publish(cmd)
+            self.publish_predicted_path(cmd)
 
-        # Check if the goal pose is reached
-        self.check_goal_reached(target)
+          # Check if the goal pose is reached
+          self.check_goal_reached(target)
 
   def check_goal_reached(self, target):
     """
