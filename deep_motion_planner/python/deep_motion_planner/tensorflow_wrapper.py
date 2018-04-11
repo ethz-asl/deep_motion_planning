@@ -27,6 +27,8 @@ class TensorflowWrapper():
         @type  :  bool
 
         """
+        self.last_tv = 0
+        self.last_rv = 0
 
         if filename_weights == None:
           self.init_from_graph = True
@@ -82,14 +84,29 @@ class TensorflowWrapper():
 
           prediction = self.sess.run(['model_inference:0'], feed_dict=feed_dict)[0]
 
-          return (prediction[0,0], prediction[0,1])
+          return (np.maximum(0.0, prediction[0,0]), prediction[0,1])
         else:
           feed_dict = {self.input_data_placeholder: [data],
                        self.keep_prob_placeholder: 1.0}
           prediction = self.sess.run(self.model_inference, feed_dict=feed_dict)[0]
           std_trans = 0.1
-          std_rot = 0.15
-          return (np.maximum(-0.0, prediction[0] + np.random.normal(0, std_trans)), prediction[1] + np.random.normal(0, std_rot))
+          std_rot = 0.1
+
+          tv = np.maximum(-0.0, prediction[0] + np.random.normal(0, std_trans))
+#           if tv < 0.2:
+#             tv *= 2
+#           tv = np.minimum(tv, 0.7)
+
+          rv = prediction[1] + np.random.normal(0, std_rot)
+
+          lambda_tv = 1.0
+          lambda_rv = 1.0
+          tv_filtered = lambda_tv * tv + (1-lambda_tv) * self.last_tv
+          self.last_tv = tv
+          rv_filtered = lambda_rv * rv + (1-lambda_rv) * self.last_rv
+          self.last_rv = rv
+
+          return (tv_filtered, rv_filtered)
 
 
 
