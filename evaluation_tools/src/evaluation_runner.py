@@ -142,6 +142,7 @@ class EvaluationRunner():
       self.n_timeout += 1
       self.navigation_client.cancel_goal()
       self.abort_pub.publish(Empty())
+      self.stop_pub.publish(Empty())
       return
 
     # Compute the relative goal pose within the robot base frame
@@ -188,6 +189,7 @@ class EvaluationRunner():
       # Execution was not successful, so abort execution and reset the simulation
       rospy.loginfo("Action returned: {}".format(GoalStatus.to_string(state)))
       self.abort_pub.publish(Empty())
+      self.stop_pub.publish(Empty())
 
     # Wait shortly before publishing the next command
     rospy.sleep(0.5)
@@ -228,6 +230,7 @@ class EvaluationRunner():
       self.n_crash += 1
       self.trajectory_idx += 1
       self.abort_pub.publish(Empty())
+      self.stop_pub.publish(Empty())
       self.__reset_simulation__()
       self.__send_next_command__()
     self.stalled_old = data.data
