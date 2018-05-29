@@ -1,4 +1,4 @@
-import rosbag 
+import rosbag
 import pickle
 import os
 
@@ -10,10 +10,10 @@ from move_base_msgs.msg import MoveBaseActionFeedback
 from std_msgs.msg import Empty
 from actionlib_msgs.msg import GoalStatus
 
-from time_msg_container import *
+from TimeMsgContainer import *
 
 class RosbagInterface():
-  
+
   def __init__(self, log_path):
     self.log_path = log_path
     self.bag = rosbag.Bag(self.log_path)
@@ -34,15 +34,15 @@ class RosbagInterface():
           vel_cmd_msgs.times.append(t)
           vel_cmd_msgs.msgs.append(msg)
         self.msg_container['vel_cmd'] = vel_cmd_msgs
-      
-      # Get scans 
+
+      # Get scans
       scan_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/base_scan']):
         scan_msgs.times.append(t)
         scan_msgs.msgs.append(msg)
       self.msg_container['scan'] = scan_msgs
-      
-      # Get published goal positions 
+
+      # Get published goal positions
       goal_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/move_base/current_goal']):
         goal_msgs.times.append(t)
@@ -55,7 +55,7 @@ class RosbagInterface():
           goal_msgs.times.append(t)
           goal_msgs.msgs.append(msg)
         self.msg_container['goal'] = goal_msgs
-        
+
       # Get position/localization messages
       loc_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/amcl_pose']):
@@ -68,7 +68,7 @@ class RosbagInterface():
           loc_msgs.times.append(t)
           loc_msgs.msgs.append(msg)
         self.msg_container['loc'] = loc_msgs
-      
+
       # Odometry data
       odom_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/base_pose_ground_truth']):
@@ -81,35 +81,35 @@ class RosbagInterface():
           odom_msgs.times.append(t)
           odom_msgs.msgs.append(msg)
         self.msg_container['odom'] = odom_msgs
-      
+
       # Mission start
       start_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/start']):
         start_msgs.times.append(t)
         start_msgs.msgs.append(msg)
       self.msg_container['start'] = start_msgs
-      
+
       # Mission stop
       stop_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/stop']):
         stop_msgs.times.append(t)
         stop_msgs.msgs.append(msg)
       self.msg_container['stop'] = stop_msgs
-      
+
       # Joystick
       joy_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/joy']):
         joy_msgs.times.append(t)
         joy_msgs.msgs.append(msg)
       self.msg_container['joy'] = joy_msgs
-      
+
       # Goal status messages
       goal_status_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/move_base/status']):
         goal_status_msgs.times.append(t)
         goal_status_msgs.msgs.append(msg)
       self.msg_container['goal_status'] = goal_status_msgs
-      
+
       # Map msg
       map_msgs = TimeMsgContainer()
       for topic, msg, t in self.bag.read_messages(topics=['/map']):
@@ -123,11 +123,11 @@ class RosbagInterface():
           time_msg_container.times.append(t)
           time_msg_container.msgs.append(msg)
         self.msg_container[topic] = time_msg_container
-        
+
     return self.msg_container
-  
+
   def get_topics(self):
     return self.msg_container.keys()
-    
+
   def save_container(self, filename, path=''):
     pickle.dump(self.msg_container, open(os.path.join(path, filename), 'wb'))
