@@ -7,7 +7,9 @@
   <node name="deep_motion_planner" pkg="deep_motion_planner" type="deep_motion_planner_node.py"
   output="screen">
     <remap from="scan" to="base_scan"/>
-    <param name="model_path" type="string" value="$(find deep_motion_planner)/models/" />
+    <param name="model_path" type="string" value="$(find deep_motion_planner)/models/final_models/neg02_09_limits/2018-03-15_12-25_fc_36_office_1000" />
+    <param name="pickle_weights_path" type="string" value="$(find deep_motion_planner)/trained_models_rl_nav/office_1000+rl-3maps/weights/weights_actor1000.p" />
+    <param name="use_pickle_weights" type="bool" value="True" />
     <param name="use_checkpoints" type="bool" value="False" />
     <param name="protobuf_file" type="string" value="model.pb" />
     <remap from="/cmd_vel" to="/deep_planner/cmd_vel" />
