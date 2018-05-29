@@ -30,13 +30,11 @@ def parse_args():
   parser.add_argument('-s', '--max_steps', help='Number of batches to run', type=int, default=1000000)
   parser.add_argument('-e', '--eval_steps', help='Evaluate model every N steps', type=int, default=25000)
   parser.add_argument('-b', '--batch_size', help='Size of training batches', type=int,  default=16)
-  parser.add_argument('-t', '--train_dir', help='Directory to save the model snapshots',
-      default='./models/default')
+  parser.add_argument('-t', '--train_dir', help='Directory to save the model snapshots', default='./models/default')
   parser.add_argument('-l', '--learning_rate', help='Initial learning rate', type=float, default=0.01)
-  parser.add_argument('--weight_initialize', help='Initialize network weights with this checkpoint\
-            file', type=str)
-  parser.add_argument('-m', '--mail', help='Send an email when training finishes',
-      action='store_true')
+  parser.add_argument('--weight_initialize', help='Initialize network weights with this checkpoint file', type=str)
+  parser.add_argument('-m', '--mail', help='Send an email when training finishes', action='store_true')
+  parser.add_argument('--use_conv_model', help='Use convolutional model instead of simple FC one.', action='store_true')
   args = parser.parse_args()
 
   return args

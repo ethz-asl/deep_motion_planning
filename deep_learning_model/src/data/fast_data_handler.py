@@ -20,7 +20,7 @@ class FastDataHandler():
     self.mean_filter_size = mean_filter_size
     self.use_odom_vel = False
     self.laser_subsampling = laser_subsampling
-    self.num_dist_values = 36
+    self.num_dist_values = num_dist_values
 
     # Check if the parameters are valid
 

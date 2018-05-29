@@ -114,61 +114,102 @@ def _get_bias_variable(shape, name, regularizer=None,
     tf.summary.histogram(name, var)
   return var
 
-def inference(data, keep_prob, sample_size, training=True, reuse=False, regularization_weight=0.001, output_name='prediction', filename_init=None):
+def inference(data, keep_prob, sample_size, training=True, reuse=False, regularization_weight=0.001, use_conv_net=False,
+              output_name='prediction', filename_init=None):
   """
   Define the deep neural network used for inference
   """
-  # Slice input data from data tensor
-#   laser = tf.slice(data, [0, 0], [sample_size, N_RANGE_FINDINGS])
-#   goal = tf.slice(data, [0, N_RANGE_FINDINGS], [sample_size, N_TARGET])
-#
-#   state = tf.concat([laser, goal], axis=1, name='state')
 
-  n_hidden1 = 1000
-  n_hidden2 = 300
-  n_hidden3 = 100
+  weights = {}
+  biases = {}
 
-  if filename_init is None:
-    with tf.variable_scope('Weights', reuse=tf.AUTO_REUSE):
-       weights = {'h1' : _get_weight_variable(shape=[INPUT_SIZE, n_hidden1], name='h1', regularizer=None,
-                                              initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
-                                              summary=True, trainable=training),
-                  'h2' : _get_weight_variable(shape=[n_hidden1, n_hidden2], name='h2', regularizer=None,
-                                              initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
-                                              summary=True, trainable=training),
-                  'h3' : _get_weight_variable(shape=[n_hidden2, n_hidden3], name='h3', regularizer=None,
-                                              initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
-                                              summary=True, trainable=training),
-                  'out' : _get_weight_variable(shape=[n_hidden3, CMD_SIZE], name='out', regularizer=None,
-                                              initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
-                                              summary=True, trainable=training)}
-    with tf.variable_scope('Biases', reuse=tf.AUTO_REUSE):
-      biases = {'b1' : _get_bias_variable(shape=[n_hidden1], name='b1', trainable=training),
-                'b2' : _get_bias_variable(shape=[n_hidden2], name='b2', trainable=training),
-                'b3' : _get_bias_variable(shape=[n_hidden3], name='b3', trainable=training),
-                'out' : _get_bias_variable(shape=[CMD_SIZE], name='out', trainable=training)}
+  if use_conv_net:
+    laser = tf.slice(data, [0, 0], [sample_size, 1080])
+    goal = tf.slice(data, [0, 1080], [sample_size, 2])
+
+    laser = tf.reshape(laser, [sample_size, 1, 1080, 1])  # format into [batch_size, height, width, channels]
+
+    hidden_1 = conv2d(laser, 64, [1,7], stride=3, normalizer_fn=batch_norm,
+        weights_initializer=xavier_initializer_conv2d(),
+        weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_1')
+    hidden_1 = contrib.layers.max_pool2d(hidden_1, [1,3],[1,3], 'SAME')
+    print("hidden_1: {}".format(hidden_1.get_shape()))
+    hidden_2 = conv2d(hidden_1, 64, [1,3], normalizer_fn=batch_norm,
+        weights_initializer=xavier_initializer_conv2d(),
+        weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_2')
+    hidden_3 = conv2d(hidden_2, 64, [1,3], activation_fn=None, normalizer_fn=batch_norm,
+        weights_initializer=xavier_initializer_conv2d(),
+        weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_3')
+    print("hidden_3 BEFORE fusion: {}".format(hidden_3.get_shape()))
+    hidden_3 = tf.nn.relu(hidden_3 + hidden_1)
+    print("hidden_3 AFTER fusion: {}".format(hidden_3.get_shape()))
+    hidden_4 = conv2d(hidden_3, 64, [1,3], normalizer_fn=batch_norm,
+        weights_initializer=xavier_initializer_conv2d(),
+        weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_4')
+    hidden_5 = conv2d(hidden_4, 64, [1,3], activation_fn=None, normalizer_fn=batch_norm,
+        weights_initializer=xavier_initializer_conv2d(),
+        weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_5')
+    hidden_5 = tf.nn.relu(hidden_5 + hidden_3)
+
+    pooling = contrib.layers.avg_pool2d(hidden_5, [1,3],[1,3], 'SAME')
+    pooling = contrib.layers.flatten(pooling)
+    combined = tf.concat([pooling, goal], axis=1)
+    fc_5 = fully_connected(combined, 1024, weights_initializer=xavier_initializer(),
+        weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_5')
+    fc_6 = fully_connected(fc_5, 1024, weights_initializer=xavier_initializer(),
+        weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_6')
+    fc_7 = fully_connected(fc_6, 512, weights_initializer=xavier_initializer(),
+        weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='fc_scope_7')
+    prediction_norm = tf.nn.tanh(fully_connected(fc_7, CMD_SIZE, activation_fn=None, reuse=reuse, trainable=training, scope='layer_scope_pred'))
+
+    prediction_norm = tf.identity(prediction_norm, name=output_name)
+
   else:
-    print("Initializing weights from '{}'".format(filename_init))
-    param_data = pickle.load(open(filename_init,"rb"))
-    weights = param_data[0]
-    biases = param_data[1]
-    with tf.variable_scope('Weights'):
-      weights = {'h1' : tf.Variable(weights['h1'], name = 'h1'),
-                 'h2' : tf.Variable(weights['h2'], name = 'h2'),
-                 'h3' : tf.Variable(weights['h3'], name = 'h3'),
-                 'out' : tf.Variable(weights['out'], name = 'out')}
-    with tf.variable_scope('Biases'):
-      biases = {'b1' : tf.Variable(biases['b1'], name = 'b1'),
-                'b2' : tf.Variable(biases['b2'], name = 'b2'),
-                'b3' : tf.Variable(biases['b3'], name = 'b3'),
-                'out' : tf.Variable(biases['out'], name = 'out')}
+    n_hidden1 = 1000
+    n_hidden2 = 300
+    n_hidden3 = 100
+
+    if filename_init is None:
+      with tf.variable_scope('Weights', reuse=tf.AUTO_REUSE):
+         weights = {'h1' : _get_weight_variable(shape=[INPUT_SIZE, n_hidden1], name='h1', regularizer=None,
+                                                initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                                                summary=True, trainable=training),
+                    'h2' : _get_weight_variable(shape=[n_hidden1, n_hidden2], name='h2', regularizer=None,
+                                                initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                                                summary=True, trainable=training),
+                    'h3' : _get_weight_variable(shape=[n_hidden2, n_hidden3], name='h3', regularizer=None,
+                                                initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                                                summary=True, trainable=training),
+                    'out' : _get_weight_variable(shape=[n_hidden3, CMD_SIZE], name='out', regularizer=None,
+                                                initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                                                summary=True, trainable=training)}
+      with tf.variable_scope('Biases', reuse=tf.AUTO_REUSE):
+        biases = {'b1' : _get_bias_variable(shape=[n_hidden1], name='b1', trainable=training),
+                  'b2' : _get_bias_variable(shape=[n_hidden2], name='b2', trainable=training),
+                  'b3' : _get_bias_variable(shape=[n_hidden3], name='b3', trainable=training),
+                  'out' : _get_bias_variable(shape=[CMD_SIZE], name='out', trainable=training)}
+    else:
+      print("Initializing weights from '{}'".format(filename_init))
+      param_data = pickle.load(open(filename_init,"rb"))
+      weights = param_data[0]
+      biases = param_data[1]
+      with tf.variable_scope('Weights'):
+        weights = {'h1' : tf.Variable(weights['h1'], name = 'h1'),
+                   'h2' : tf.Variable(weights['h2'], name = 'h2'),
+                   'h3' : tf.Variable(weights['h3'], name = 'h3'),
+                   'out' : tf.Variable(weights['out'], name = 'out')}
+      with tf.variable_scope('Biases'):
+        biases = {'b1' : tf.Variable(biases['b1'], name = 'b1'),
+                  'b2' : tf.Variable(biases['b2'], name = 'b2'),
+                  'b3' : tf.Variable(biases['b3'], name = 'b3'),
+                  'out' : tf.Variable(biases['out'], name = 'out')}
 
 
-  hidden_layer1 = tf.nn.tanh(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
-  hidden_layer1 = tf.nn.dropout(hidden_layer1, keep_prob=keep_prob, name='dropout_1')
-  hidden_layer2 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer1, weights['h2']), biases['b2']))
-  hidden_layer3 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer2, weights['h3']), biases['b3']))
-  prediction_norm = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']), name='normalized_output')
+    hidden_layer1 = tf.nn.tanh(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
+    hidden_layer1 = tf.nn.dropout(hidden_layer1, keep_prob=keep_prob, name='dropout_1')
+    hidden_layer2 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer1, weights['h2']), biases['b2']))
+    hidden_layer3 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer2, weights['h3']), biases['b3']))
+    prediction_norm = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']), name='normalized_output')
 
   # De-normalize output prediction
   range_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS - LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
