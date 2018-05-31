@@ -13,7 +13,7 @@ class TensorflowWrapper():
     The class is used to load a pretrained tensorflow model and
     use it on live sensor data
     """
-    def __init__(self, storage_path, protobuf_file='graph.pb', use_checkpoints=False, filename_weights=None):
+    def __init__(self, storage_path, protobuf_file='graph.pb', use_checkpoints=False, filename_weights=None, input_dimension=38):
         """Initialize a new TensorflowWrapper object
 
         @param storage_path: The path to the protobuf_file and the snapshots
@@ -60,7 +60,7 @@ class TensorflowWrapper():
         else:
           self.init_from_graph = False
           self.sess = tf.Session()
-          self.input_data_placeholder = tf.placeholder(tf.float32, shape=[1, 38], name="input_data_placeholder")
+          self.input_data_placeholder = tf.placeholder(tf.float32, shape=[1, input_dimension], name="input_data_placeholder")
           self.keep_prob_placeholder = tf.placeholder(tf.float32, name="keep_prob_placeholder")
           self.model_inference, _, _ = model.inference(self.input_data_placeholder, self.keep_prob_placeholder, 1,
                                                        training=False, reuse=True, output_name='model_inference',

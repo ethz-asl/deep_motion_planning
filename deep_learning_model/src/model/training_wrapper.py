@@ -95,7 +95,7 @@ class TrainingWrapper():
 
       logger.info('Add operations to the computation graph')
       keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
-      prediction, _, _ = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size,
+      prediction = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size,
                                          use_conv_net=self.args.use_conv_model, output_name='prediction')
 
       loss, loss_split = model.loss(prediction, cmd_batch)
@@ -103,7 +103,7 @@ class TrainingWrapper():
       train_op = model.training(loss, loss_split, learning_rate, global_step)
 
       eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(self.input_size, CMD_SIZE, 'eval_data_input')
-      eval_prediction, weights_node, biases_node = model.inference(eval_data_placeholder, keep_prob_placeholder,
+      eval_prediction = model.inference(eval_data_placeholder, keep_prob_placeholder,
                                                                    self.eval_batch_size, training=False, reuse=True,
                                                                    use_conv_net=self.args.use_conv_model,
                                                                    output_name='eval_prediction')
@@ -112,7 +112,7 @@ class TrainingWrapper():
 
       # This model is saved with the trained weights and can direclty be executed
       exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(self.input_size, CMD_SIZE)
-      model_inference, _, _ = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
+      model_inference = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
                                               training=False, reuse=True, use_conv_net=self.args.use_conv_model,
                                               output_name='model_inference')
 
@@ -195,7 +195,7 @@ class TrainingWrapper():
           loss_train = loss_value
 
           # Replace the durations in fifo fashion
-          duration_vector[((step % self.args.eval_steps)//100)] = duration
+          duration_vector[((step % self.args.eval_steps) // 100)] = duration
 
 #         # Evaluate the model
 #         if step > 0 and step % self.args.eval_steps == 0 or step == (self.args.max_steps - 1):
@@ -238,16 +238,10 @@ class TrainingWrapper():
           filename = os.path.join(storage_path, 'snap')
           saver.save(self.sess, filename, global_step=step)
 
-          weights_store, biases_store = self.sess.run([weights_node, biases_node])
-          pickle.dump((weights_store, biases_store), open(os.path.join(storage_path, 'variables_{}.p'.format(step)), 'wb'))
-
 
       logger.info('Save final model snapshot')
       filename = os.path.join(storage_path, 'final')
       saver.save(self.sess, filename)
-
-      weights_store, biases_store = self.sess.run([weights_node, biases_node])
-      pickle.dump((weights_store, biases_store), open(os.path.join(storage_path, 'variables_final.p'), 'wb'))
 
       # Save the model with weights in one file
       # This will only capture the operations used to generate the prediction. It also

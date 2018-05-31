@@ -46,21 +46,6 @@ class DeepMotionPlanner():
     self.num_subsampled_scans = 36
     self.num_raw_laser_scans = 1080
     self.time_last_call = rospy.get_rostime()
-#     self.column_line = ['count'] + \
-#                        ['laser_raw' + str(i) for i in range(self.num_raw_laser_scans)] + \
-#                        ['target_global_frame_x', 'target_global_frame_y', 'target_global_frame_yaw',
-#                         'robot_pose_global_frame_x', 'robot_pose_global_frame_y', 'robot_pose_global_frame_yaw'] + \
-#                        ['laser_input_model' + str(i) for i in range(self.num_subsampled_scans)] + \
-#                        ['goal_distance', 'goal_angle']
-#
-#     date_str = datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')
-#     self.storage_path = os.path.join('/home/pfmark/Desktop/dump', date_str)
-#     print("Logging under: {}".format(self.storage_path))
-#     os.mkdir(self.storage_path)
-#
-#     self.output_file = open(os.path.join(self.storage_path, 'logging_data.csv'), 'wb')
-#     self.writer= csv.writer(self.output_file, delimiter=',')
-#     self.writer.writerow(self.column_line)
 
     # Load various ROS parameters
     if not rospy.has_param('~model_path'):
@@ -73,6 +58,7 @@ class DeepMotionPlanner():
     self.pickle_weights_path = rospy.get_param('~pickle_weights_path', default=None)
     self.use_pickle_weights = rospy.get_param('~use_pickle_weights', default=False)
     self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
+    self.use_conv_model = rospy.get_param('~use_conv_model', default=False)
     self.use_checkpoints = rospy.get_param('~use_checkpoints', default=False)
     if not os.path.exists(self.model_path):
       rospy.logerr('Model path does not exist: {}'.format(self.model_path))
@@ -97,7 +83,6 @@ class DeepMotionPlanner():
     self.relative_target_pub  = rospy.Publisher('/relative_target', PoseStamped, queue_size=1)
     self.input_goal_pub = rospy.Publisher('/deep_planner/input/goal', Float32MultiArray, queue_size=1)
     self.input_laser_pub = rospy.Publisher('/deep_planner/input/laser', LaserScan, queue_size=1)
-
 
     # We over the same action api as the move base package
     self._as = actionlib.SimpleActionServer('deep_move_base', MoveBaseAction, auto_start = False)
@@ -143,20 +128,12 @@ class DeepMotionPlanner():
     else:
       filename_weights = None
     with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints,
-                           filename_weights=filename_weights) as tf_wrapper:
+                           filename_weights=filename_weights, input_dimension=1082) as tf_wrapper:
       next_call = time.time()
       # Stop if the interrupt is requested
       cnt = 1
 
       while not self.interrupt_event.is_set():
-
-        # Run processing with the correct frequency
-#         next_call = next_call+1.0/self.freq
-#         sleep_time = next_call - time.time()
-#         if sleep_time > 0.0:
-#           time.sleep(sleep_time)
-#         else:
-#           rospy.logerr('Missed control loop frequency')
 
         if rospy.get_rostime() - self.time_last_call >= rospy.Duration(1.0 / self.freq):
           self.time_last_call = rospy.get_rostime()
@@ -179,7 +156,10 @@ class DeepMotionPlanner():
 
           # Convert scans to numpy array
           cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
-          transformed_scans = sup.transform_laser(cropped_scans_np, self.num_subsampled_scans)
+          if self.use_conv_model:
+            transformed_scans = sup.transform_laser(cropped_scans_np, len(cropped_scans_np))
+          else:
+            transformed_scans = sup.transform_laser(cropped_scans_np, self.num_subsampled_scans)
 
           if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
             rospy.logerr('Scan contained invalid float (nan or inf)')
@@ -197,7 +177,6 @@ class DeepMotionPlanner():
           cropped_scan_msg.range_max = scan_msg.range_max
           cropped_scan_msg.ranges = cropped_scans
           self.input_laser_pub.publish(cropped_scan_msg)
-
 
           # Prepare the input vector, perform the inference on the model
           # and publish a new command

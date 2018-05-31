@@ -35,7 +35,7 @@ def normalize_laser(laser_data, max_range=30):
 def invert_laser(laser_data):
   return 1 - laser_data
 
-def transform_laser(laser_data, num_chunks=36, max_range=30.0):
+def transform_laser(laser_data, num_chunks=36, max_range=30.0, use_subsampling=True):
   laser = subsample_laser(laser_data, num_chunks)
   laser = crop_laser(laser, max_range)
   laser = normalize_laser(laser, max_range)
