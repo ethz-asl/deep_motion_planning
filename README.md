@@ -1,7 +1,7 @@
 # deep_motion_planning
-Using Deep Neural Networks for robot navigation purposes:
+This repo contains various ROS packages dealing with end-to-end imitation learning for ground robot navigation using neural networks. 
 
-The repository contains various ROS packages that are used to generate the training data.
+More details about this work can be found in the papers about [imitation learning](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7989182) and [imitation learning combined with reinforcement learning](https://arxiv.org/pdf/1805.07095.pdf).
 
 ## Usage
 
@@ -16,12 +16,6 @@ You can then start a mission by executing:
 rosrun mission_control mission_control_node.py _mission_file:=$(rospack find mission_control)/missions/rooms.txt _deep_motion_planner:=False
 ```
 The parameter <_mission_file> defines the path to the mission definition that you want to execute. 
-The example above assumes that you are in the top folder of your catkin workspace.
-
-Finally, if you want to see a visualization of the system, run:
-```
-roslaunch stage_worlds rviz.launch
-```
 
 ### With Deep Motion Planner
 To start the simulation in combination with the deep motion planner, run:
@@ -34,7 +28,6 @@ You can then start a mission by executing:
 rosrun mission_control mission_control_node.py _mission_file:=$(rospack find mission_control)/missions/rooms.txt _deep_motion_planner:=True
 ```
 The parameter <_mission_file> defines the path to the mission definition that you want to execute. 
-The example above assumes that you are in the top folder of your catkin workspace.
 
 ## Packages
 ### stage_worlds
@@ -42,8 +35,8 @@ The stage_worlds package contains the configuration files for the simulation, va
 definitions and their ROS launch files.
 
 ### mission_control
-This package contains a mission control node which executes a user defined mission. Therefor,
-a txt file is parsed and a sequence of commands is generated. This sequence is then processed 
+This package contains a mission control node which executes a user defined mission. Therefore,
+a .txt file is parsed and a sequence of commands is generated. This sequence is then processed 
 step-by-step. For more details on the definition of a mission, please refer to the README file
 in the package directory.
 
