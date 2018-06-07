@@ -45,6 +45,7 @@ class DeepMotionPlanner():
     self.max_laser_range = 20.0
     self.num_subsampled_scans = 36
     self.num_raw_laser_scans = 1080
+    self.target_dimension = 2
     self.time_last_call = rospy.get_rostime()
 
     # Load various ROS parameters
@@ -55,10 +56,9 @@ class DeepMotionPlanner():
     self.laser_scan_stride = rospy.get_param('~laser_scan_stride', default=1) # Take every ith element
     self.n_laser_scans = rospy.get_param('~n_laser_scans', default=1080) # Cut n elements from the center to adjust the length
     self.model_path = rospy.get_param('~model_path')
-    self.pickle_weights_path = rospy.get_param('~pickle_weights_path', default=None)
-    self.use_pickle_weights = rospy.get_param('~use_pickle_weights', default=False)
     self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
     self.use_conv_model = rospy.get_param('~use_conv_model', default=False)
+    self.use_stochastic_policy = rospy.get_param('~use_stochastic_policy', default=False)
     self.use_checkpoints = rospy.get_param('~use_checkpoints', default=False)
     if not os.path.exists(self.model_path):
       rospy.logerr('Model path does not exist: {}'.format(self.model_path))
@@ -123,12 +123,8 @@ class DeepMotionPlanner():
     runs until the interrupt_event is set
     """
     # Get a handle for the tensorflow interface
-    if self.use_pickle_weights:
-      filename_weights = self.pickle_weights_path
-    else:
-      filename_weights = None
     with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints,
-                           filename_weights=filename_weights, input_dimension=1082) as tf_wrapper:
+                           use_stochastic_policy=self.use_stochastic_policy, input_dimension=self.num_raw_laser_scans+self.target_dimension) as tf_wrapper:
       next_call = time.time()
       # Stop if the interrupt is requested
       cnt = 1
@@ -157,7 +153,7 @@ class DeepMotionPlanner():
           # Convert scans to numpy array
           cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
           if self.use_conv_model:
-            transformed_scans = sup.transform_laser(cropped_scans_np, len(cropped_scans_np))
+            transformed_scans = sup.transform_laser(cropped_scans_np, cropped_scans_np.shape[1])
           else:
             transformed_scans = sup.transform_laser(cropped_scans_np, self.num_subsampled_scans)
 
@@ -199,17 +195,6 @@ class DeepMotionPlanner():
           input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2]
 
           (base_position,base_orientation) = self.transform_listener.lookupTransform('/map', '/base_link', rospy.Time())
-
-  #         target_orientation = self.target_pose.target_pose.pose.orientation
-  #
-  #         new_row = [cnt] + \
-  #                   cropped_scans + \
-  #                   [self.target_pose.target_pose.pose.position.x, self.target_pose.target_pose.pose.position.y, sup.get_yaw_from_quat(target_orientation)] + \
-  #                   [base_position[0], base_position[1], tf.transformations.euler_from_quaternion(base_orientation)[2]] + \
-  #                   list(transformed_scans.tolist()[0]) + \
-  #                   data.tolist()[0:2]
-  #         self.writer.writerow(new_row)
-  #         cnt += 1
 
           linear_x, angular_z = tf_wrapper.inference(input_data)
 
