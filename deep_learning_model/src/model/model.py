@@ -140,6 +140,7 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
     print("hidden_3 BEFORE fusion: {}".format(hidden_3.get_shape()))
     hidden_3 = tf.nn.relu(hidden_3 + hidden_1)
     print("hidden_3 AFTER fusion: {}".format(hidden_3.get_shape()))
+    hidden_3 = tf.nn.dropout(hidden_3, keep_prob=keep_prob, name='dropout_after_3')
     hidden_4 = conv2d(hidden_3, 64, [1,3], normalizer_fn=batch_norm,
         weights_initializer=xavier_initializer_conv2d(),
         weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_4')
