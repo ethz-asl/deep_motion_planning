@@ -120,6 +120,9 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
   Define the deep neural network used for inference
   """
 
+  weights = {}
+  biases = {}
+
   if use_conv_net:
     laser = tf.slice(data, [0, 0], [sample_size, 1080])
     goal = tf.slice(data, [0, 1080], [sample_size, 2])
@@ -168,7 +171,7 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
     n_hidden3 = 100
 
     # Initialize weights, if required
-    with tf.variable_scope('Weights', reuse=tf.AUTO_REUSE):
+    with tf.variable_scope('Actor/Weights', reuse=tf.AUTO_REUSE):
        weights = {'h1' : _get_weight_variable(shape=[INPUT_SIZE, n_hidden1], name='h1', regularizer=None,
                                               initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
                                               summary=True, trainable=training),
@@ -181,7 +184,7 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
                   'out' : _get_weight_variable(shape=[n_hidden3, CMD_SIZE], name='out', regularizer=None,
                                               initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
                                               summary=True, trainable=training)}
-    with tf.variable_scope('Biases', reuse=tf.AUTO_REUSE):
+    with tf.variable_scope('Actor/Biases', reuse=tf.AUTO_REUSE):
       biases = {'b1' : _get_bias_variable(shape=[n_hidden1], name='b1', trainable=training),
                 'b2' : _get_bias_variable(shape=[n_hidden2], name='b2', trainable=training),
                 'b3' : _get_bias_variable(shape=[n_hidden3], name='b3', trainable=training),
@@ -199,7 +202,7 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
   avg_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS + LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
   prediction = tf.add(tf.multiply(prediction_norm, range_limits), avg_limits, name=output_name)
 
-  return prediction
+  return prediction, weights, biases
 
 def loss(prediction, cmd):
   """

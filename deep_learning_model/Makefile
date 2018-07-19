@@ -4,7 +4,7 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-DATASET = combined_shapes_office_2k
+DATASET = office_1000
 DATASET_EVAL = eval_300
 
 # Makefile arguments
@@ -26,7 +26,7 @@ data:
 train:
 	python src/model/train_model.py data/processed/$(DATASET).h5 \
 				 													data/processed/$(DATASET_EVAL).h5 \
-				 													-l $(LEARNING_RATE) -s $(TRAINING_STEPS) -b $(BATCH_SIZE) --mail --use_conv_model
+				 													-l $(LEARNING_RATE) -s $(TRAINING_STEPS) -b $(BATCH_SIZE) --mail
 
 eval:
 	python src/model/predict_model.py -c reports/evaluation.csv data/processed/$(DATASET_EVAL).h5 \
