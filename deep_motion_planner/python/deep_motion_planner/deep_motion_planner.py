@@ -42,7 +42,7 @@ class DeepMotionPlanner():
     self.send_motion_commands = True
     self.base_position = None
     self.base_orientation = None
-    self.max_laser_range = 20.0
+    self.max_laser_range = 30.0
     self.num_subsampled_scans = 36
     self.num_raw_laser_scans = 1080
     self.time_last_call = rospy.get_rostime()
