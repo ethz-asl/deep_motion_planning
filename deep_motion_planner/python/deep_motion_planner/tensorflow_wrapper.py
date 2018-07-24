@@ -89,8 +89,8 @@ class TensorflowWrapper():
           feed_dict = {self.input_data_placeholder: [data],
                        self.keep_prob_placeholder: 1.0}
           prediction = self.sess.run(self.model_inference, feed_dict=feed_dict)[0]
-          std_trans = 0.1
-          std_rot = 0.1
+          std_trans = 0.0
+          std_rot = 0.0
 
           tv = np.maximum(-0.0, prediction[0] + np.random.normal(0, std_trans))
 #           if tv < 0.2:

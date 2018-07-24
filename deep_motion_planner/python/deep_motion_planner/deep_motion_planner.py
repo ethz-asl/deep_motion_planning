@@ -182,7 +182,7 @@ class DeepMotionPlanner():
           # Convert scans to numpy array
           cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
 #           transformed_scans = sup.transform_laser(cropped_scans_np, self.num_subsampled_scans)
-          transformed_scans = sup.transform_laser_tai(cropped_scans_np)
+          transformed_scans = sup.transform_laser_mix(cropped_scans_np)
 
           if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
             rospy.logerr('Scan contained invalid float (nan or inf)')
@@ -220,8 +220,8 @@ class DeepMotionPlanner():
           goal_msg.data = data
           self.input_goal_pub.publish(goal_msg)
 
-          input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2] + [self.latest_odom.twist.twist.linear.x,
-                                                                                   self.latest_odom.twist.twist.angular.z]
+          input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2] #+ [self.latest_odom.twist.twist.linear.x,
+                                                                                 #  self.latest_odom.twist.twist.angular.z]
 
           (base_position,base_orientation) = self.transform_listener.lookupTransform('/map', '/base_link', rospy.Time())
 

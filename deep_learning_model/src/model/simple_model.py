@@ -12,7 +12,7 @@ import tensorflow.contrib as contrib
 import numpy as np
 
 # Give the model a descriptive name
-NAME = 'shapes1000_ddpg_pool_novel'
+NAME = 'shapes1000_ddpg_pool_noVel_tanh'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 10
@@ -175,11 +175,11 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
   print("weights 1 shape: {}".format(weights['h1'].get_shape()))
   print("biases 1 shape: {}".format(biases['b1'].get_shape()))
 
-  target_hidden_layer1 = tf.nn.relu(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
+  target_hidden_layer1 = tf.nn.tanh(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
   print("H1 shape: {}".format(target_hidden_layer1.get_shape()))
-  target_hidden_layer2 = tf.nn.relu(tf.add(tf.matmul(target_hidden_layer1, weights['h2']), biases['b2']))
+  target_hidden_layer2 = tf.nn.tanh(tf.add(tf.matmul(target_hidden_layer1, weights['h2']), biases['b2']))
   print("H2 shape: {}".format(target_hidden_layer2.get_shape()))
-  target_hidden_layer3 = tf.nn.relu(tf.add(tf.matmul(target_hidden_layer2, weights['h3']), biases['b3']))
+  target_hidden_layer3 = tf.nn.tanh(tf.add(tf.matmul(target_hidden_layer2, weights['h3']), biases['b3']))
   print("H3 shape: {}".format(target_hidden_layer3.get_shape()))
   out = tf.add(tf.matmul(target_hidden_layer3, weights['out']), biases['out'])
   print("out shape: {}".format(out.get_shape()))
