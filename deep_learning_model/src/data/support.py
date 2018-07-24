@@ -6,7 +6,7 @@ import tf
 from geometry_msgs.msg import PoseStamped
 
 
-def subsample_laser(laser_data, num_chunks):
+def min_pool_laser(laser_data, num_chunks):
   """
   Subsample laser measurements (take minimum of each chunk).
   Inputs:
@@ -36,7 +36,7 @@ def invert_laser(laser_data):
   return 1 - laser_data
 
 def transform_laser(laser_data, num_chunks=36, max_range=30.0):
-  laser = subsample_laser(laser_data, num_chunks)
+  laser = min_pool_laser(laser_data, num_chunks)
   laser = crop_laser(laser, max_range)
   laser = normalize_laser(laser, max_range)
   laser = invert_laser(laser)
@@ -108,11 +108,25 @@ def transform_laser_tai(laser_data):
   number_samples = 10.0
   laser_data = np.minimum(laser_data, max_range)
   laser_data = laser_data / max_range
-  total_laser_samples = len(laser_data)
+  total_laser_samples = laser_data.shape[1]
   network_laser_inputs = 10
   laser_sensor_offset = 0.0
   laser_slice = int((2*total_laser_samples)/(3*network_laser_inputs))
   laser_slice_offset = int(total_laser_samples/6)
-  laser_data_sampled = np.array(laser_data[laser_slice_offset:total_laser_samples - laser_slice_offset:self.laser_slice]) - laser_sensor_offset
+  laser_idxs = np.array(range(total_laser_samples))
+  laser_idxs_sampled = laser_idxs[laser_slice_offset+int(laser_slice/2):total_laser_samples - laser_slice_offset:laser_slice]
+#   print("laser idxs {}".format(laser_idxs_sampled))
+  laser_data_sampled = laser_data[:, laser_idxs_sampled] - laser_sensor_offset
   return laser_data_sampled
+
+
+def transform_laser_mix(laser_data):
+  max_range = 10.0
+  num_chunks = 10
+  # remove values on left and right to get 180 deg FOV
+  number_cut_laser_values =180
+  laser_data = laser_data[:, number_cut_laser_values:-number_cut_laser_values]
+  laser = transform_laser(laser_data, num_chunks=num_chunks, max_range=max_range)
+  return laser
+
 

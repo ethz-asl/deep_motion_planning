@@ -12,12 +12,13 @@ import tensorflow.contrib as contrib
 import numpy as np
 
 # Give the model a descriptive name
-NAME = 'shapes_250_-04_06'
+NAME = 'shapes1000_ddpg_pool_novel'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 10
 N_TARGET = 2
-INPUT_SIZE = N_RANGE_FINDINGS + N_TARGET
+N_STATE = 0
+INPUT_SIZE = N_RANGE_FINDINGS + N_TARGET + N_STATE
 
 # The size of the output layer
 CMD_SIZE = 2
@@ -28,8 +29,6 @@ MEASUREMENTS_PER_SLICE = N_LASER_MEASUREMENTS / N_RANGE_FINDINGS
 
 LOWER_ACTION_LIMITS = np.array([-0.2, -np.pi / 2.])
 UPPER_ACTION_LIMITS = np.array([0.9, np.pi / 2.])
-
-v_max = 0.5
 
 # Helper functions
 def exp_transform(distance, decay_factor = 0.2):
@@ -172,11 +171,20 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
 #   hidden_layer3 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer2, weights['h3']), biases['b3']))
 #   prediction_norm = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']), name='normalized_output')
 
-  target_hidden_layer1 = tf.nn.relu(tf.add(tf.matmul(data,  weights['h1']), biases['b1']))
+  print("Data shape: {}".format(data.get_shape()))
+  print("weights 1 shape: {}".format(weights['h1'].get_shape()))
+  print("biases 1 shape: {}".format(biases['b1'].get_shape()))
+
+  target_hidden_layer1 = tf.nn.relu(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
+  print("H1 shape: {}".format(target_hidden_layer1.get_shape()))
   target_hidden_layer2 = tf.nn.relu(tf.add(tf.matmul(target_hidden_layer1, weights['h2']), biases['b2']))
+  print("H2 shape: {}".format(target_hidden_layer2.get_shape()))
   target_hidden_layer3 = tf.nn.relu(tf.add(tf.matmul(target_hidden_layer2, weights['h3']), biases['b3']))
-  target_output_linear_velocity = tf.nn.sigmoid(tf.add(tf.matmul(target_hidden_layer3, weights['out'][:,0]), biases['out'][0]))
-  target_output_angular_velocity = tf.nn.tanh(tf.add(tf.matmul(target_hidden_layer3, weights['out'][:,1]), biases['out'][1]))
+  print("H3 shape: {}".format(target_hidden_layer3.get_shape()))
+  out = tf.add(tf.matmul(target_hidden_layer3, weights['out']), biases['out'])
+  print("out shape: {}".format(out.get_shape()))
+  target_output_linear_velocity = tf.nn.sigmoid(out[:,0])
+  target_output_angular_velocity = tf.nn.tanh(out[:,1])
 
 #   # De-normalize output prediction
 #   range_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS - LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)

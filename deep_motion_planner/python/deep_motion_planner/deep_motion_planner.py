@@ -18,7 +18,7 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped, Point, Quaternion
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
 from sensor_msgs.msg import Joy
-from nav_msgs.msg import Path
+from nav_msgs.msg import Path, Odometry
 import rospkg
 # print("Current path: {}".format(os.path.dirname(os.path.abspath(__file__))))
 import support as sup
@@ -42,10 +42,11 @@ class DeepMotionPlanner():
     self.send_motion_commands = True
     self.base_position = None
     self.base_orientation = None
-    self.max_laser_range = 30.0
-    self.num_subsampled_scans = 36
+    self.max_laser_range = 10.0
+    self.num_subsampled_scans = 10
     self.num_raw_laser_scans = 1080
     self.time_last_call = rospy.get_rostime()
+    self.latest_odom = Odometry()
 #     self.column_line = ['count'] + \
 #                        ['laser_raw' + str(i) for i in range(self.num_raw_laser_scans)] + \
 #                        ['target_global_frame_x', 'target_global_frame_y', 'target_global_frame_yaw',
@@ -91,6 +92,7 @@ class DeepMotionPlanner():
     # ROS topics
     scan_sub = rospy.Subscriber('scan', LaserScan, self.scan_callback)
     goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_topic_callback)
+    odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
     joystick_sub = rospy.Subscriber('/joy', Joy, self.joystick_callback)
     self.cmd_pub  = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
     self.deep_plan_pub = rospy.Publisher('/deep_planner/path', Path, queue_size=1)
@@ -179,7 +181,8 @@ class DeepMotionPlanner():
 
           # Convert scans to numpy array
           cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
-          transformed_scans = sup.transform_laser(cropped_scans_np, self.num_subsampled_scans)
+#           transformed_scans = sup.transform_laser(cropped_scans_np, self.num_subsampled_scans)
+          transformed_scans = sup.transform_laser_tai(cropped_scans_np)
 
           if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
             rospy.logerr('Scan contained invalid float (nan or inf)')
@@ -217,7 +220,8 @@ class DeepMotionPlanner():
           goal_msg.data = data
           self.input_goal_pub.publish(goal_msg)
 
-          input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2]
+          input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2] + [self.latest_odom.twist.twist.linear.x,
+                                                                                   self.latest_odom.twist.twist.angular.z]
 
           (base_position,base_orientation) = self.transform_listener.lookupTransform('/map', '/base_link', rospy.Time())
 
@@ -350,6 +354,9 @@ class DeepMotionPlanner():
     if data.buttons[4] == 1 and data.buttons[5] == 1:
       rospy.loginfo("Planning aborted!")
       self._as.set_succeeded()
+
+  def odom_callback(self, data):
+    self.latest_odom = data
 
   def publish_predicted_path(self, cmd_vel, sim_time=rospy.Duration(1.7), dt=rospy.Duration(0.05)):
     """

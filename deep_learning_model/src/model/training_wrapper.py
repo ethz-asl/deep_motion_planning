@@ -16,9 +16,15 @@ import simple_model as model
 
 
 DIST_MEAS_SIZE = 10
-STATE_SIZE = 2
+STATE_SIZE = 0
 TARGET_SIZE = 2
 CMD_SIZE = 2
+
+print("Training setup: ")
+print("\tdist_meas_size={}".format(DIST_MEAS_SIZE))
+print("\tstate_size={}".format(STATE_SIZE))
+print("\ttarget_size={}".format(TARGET_SIZE))
+print("\tcmd_size={}".format(CMD_SIZE))
 
 class TrainingWrapper():
   """Wrap the training"""
@@ -90,14 +96,14 @@ class TrainingWrapper():
 
       train_op = model.training(loss, loss_split, learning_rate, global_step)
 
-      eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE, CMD_SIZE, 'eval_data_input')
+      eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE+STATE_SIZE, CMD_SIZE, 'eval_data_input')
       eval_prediction, weights_node, biases_node = model.inference(eval_data_placeholder, keep_prob_placeholder,
           self.eval_batch_size, training=False, reuse=True, output_name='eval_prediction')
       eval_predictions_placeholder = tf.placeholder(tf.float32, shape=[self.eval_n_elements,2])
       evaluation, evaluation_split = model.evaluation(eval_predictions_placeholder, eval_cmd_placeholder)
 
       # This model is saved with the trained weights and can direclty be executed
-      exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE, CMD_SIZE)
+      exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE+STATE_SIZE, CMD_SIZE)
       model_inference, _, _ = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
                                               training=False, reuse=True, output_name='model_inference')
 

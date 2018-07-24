@@ -13,14 +13,20 @@ import tensorflow as tf
 
 from data.fast_data_handler import FastDataHandler
 
-INPUT_SIZE = 12
+USE_VEL = False
+if USE_VEL:
+  INPUT_SIZE = 14
+else:
+  INPUT_SIZE = 12
 
 class CustomDataRunner():
   """Class to manage threads which fill a queue of data"""
   def __init__(self, filepath, batch_size, chunksize, max_perception_radius=30.0):
     with tf.device("/cpu:0"):
       self.batch_size = batch_size
-      self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_subsampling=True, max_perception_radius=max_perception_radius)
+      self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_subsampling=True,
+                                          max_perception_radius=max_perception_radius,
+                                          use_odom_vel=USE_VEL)
       self.data_x = tf.placeholder(dtype=tf.float32, shape=[None, INPUT_SIZE])
       self.data_y = tf.placeholder(dtype=tf.float32, shape=[None, 2])
 
@@ -61,7 +67,7 @@ class CustomDataRunner():
     while not (coord.should_stop() or self.threads_stop):
       data_x, data_y =self.data_handler.next_batch()
       try:
-        sess.run(self.enqueue_op, feed_dict={self.data_x:data_x[:,:-1], self.data_y:data_y})
+        sess.run(self.enqueue_op, feed_dict={self.data_x:data_x, self.data_y:data_y})
       except tf.errors.CancelledError as e:
         # This happens if we stop processing and the enque operation is pending
         pass

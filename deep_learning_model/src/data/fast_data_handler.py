@@ -12,15 +12,15 @@ import support as sup
 class FastDataHandler():
   """Class to load data from HDF5 storages in a random and chunckwise manner"""
   def __init__(self, filepath, batchsize = 16, chunksize=None, max_perception_radius=30.0,
-               mean_filter_size=5, laser_subsampling=False, num_dist_values = 36):
+               mean_filter_size=5, laser_subsampling=False, num_dist_values = 36, use_odom_vel=False):
     self.filepath = filepath
     self.chunksize = chunksize
     self.batchsize = batchsize
     self.perception_radius = max_perception_radius
     self.mean_filter_size = mean_filter_size
-    self.use_odom_vel = False
+    self.use_odom_vel = use_odom_vel
     self.laser_subsampling = laser_subsampling
-    self.num_dist_values = 36
+    self.num_dist_values = 10
 
     # Check if the parameters are valid
 
@@ -164,8 +164,7 @@ class FastDataHandler():
               self.perception_radius)
           if self.laser_subsampling:
 #             laser = sup.transform_laser(laser, self.num_dist_values)
-            laser = sup.transform_laser_tai(laser)
-            print("laser values: {}".format(laser))
+            laser = sup.transform_laser_mix(laser)
 
           # Goal data: distance, angle, heading (in robot frame)
           goal =  chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,goal_columns].values
@@ -177,14 +176,13 @@ class FastDataHandler():
           norm = sup.transform_target_distance(norm, self.perception_radius)
 
           # Velocity measurements (current velocity of robot)
-          if self.use_odom_vel:
-            odom_vel = chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, odom_vel_columns].values
+          odom_vel = chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, odom_vel_columns].values
 
           # Concatenate data: laser, goal angle, goal distance, goal heading
           if self.use_odom_vel:
-            data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1]), odom_vel), axis=1)
+            data = np.concatenate((laser, angle, norm, odom_vel), axis=1)
           else:
-            data = np.concatenate((laser, angle, norm, goal[:,2].reshape([self.batchsize,1])), axis=1)
+            data = np.concatenate((laser, angle, norm), axis=1)
 
           yield (data.copy(), chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, cmd_columns].values)
           current_index += self.batchsize
