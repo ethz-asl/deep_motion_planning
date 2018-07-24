@@ -4,7 +4,7 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-DATASET = combined_office_250_shapes_250
+DATASET = office_1000
 DATASET_EVAL = eval_300
 
 # Makefile arguments
@@ -34,7 +34,7 @@ train:
 eval:
 	python src/model/predict_model.py -c reports/evaluation.csv data/processed/$(DATASET_EVAL).h5 \
 																		../deep_motion_planner/models/model.pb
-																		
+
 sync-gpu: 
 	rsync -av --progress --exclude models/ --exclude data/raw * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/testing/imitation_learning/
 	
