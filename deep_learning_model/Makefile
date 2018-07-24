@@ -4,7 +4,7 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-DATASET = combined_office_250_shapes_250
+DATASET = office_1000
 DATASET_EVAL = eval_300
 
 # Makefile arguments

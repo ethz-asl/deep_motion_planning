@@ -15,7 +15,7 @@ import numpy as np
 NAME = 'shapes_250_-04_06'
 
 # The size of the input layer
-N_RANGE_FINDINGS = 36
+N_RANGE_FINDINGS = 10
 N_TARGET = 2
 INPUT_SIZE = N_RANGE_FINDINGS + N_TARGET
 
@@ -28,6 +28,8 @@ MEASUREMENTS_PER_SLICE = N_LASER_MEASUREMENTS / N_RANGE_FINDINGS
 
 LOWER_ACTION_LIMITS = np.array([-0.2, -np.pi / 2.])
 UPPER_ACTION_LIMITS = np.array([0.9, np.pi / 2.])
+
+v_max = 0.5
 
 # Helper functions
 def exp_transform(distance, decay_factor = 0.2):
@@ -124,9 +126,9 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
 #
 #   state = tf.concat([laser, goal], axis=1, name='state')
 
-  n_hidden1 = 1000
-  n_hidden2 = 300
-  n_hidden3 = 100
+  n_hidden1 = 512
+  n_hidden2 = 512
+  n_hidden3 = 512
 
   if filename_init is None:
     with tf.variable_scope('Weights', reuse=tf.AUTO_REUSE):
@@ -164,16 +166,27 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
                 'out' : tf.Variable(biases['out'], name = 'out')}
 
 
-  hidden_layer1 = tf.nn.tanh(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
-  hidden_layer1 = tf.nn.dropout(hidden_layer1, keep_prob=keep_prob, name='dropout_1')
-  hidden_layer2 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer1, weights['h2']), biases['b2']))
-  hidden_layer3 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer2, weights['h3']), biases['b3']))
-  prediction_norm = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']), name='normalized_output')
+#   hidden_layer1 = tf.nn.tanh(tf.add(tf.matmul(data, weights['h1']), biases['b1']))
+#   hidden_layer1 = tf.nn.dropout(hidden_layer1, keep_prob=keep_prob, name='dropout_1')
+#   hidden_layer2 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer1, weights['h2']), biases['b2']))
+#   hidden_layer3 = tf.nn.tanh(tf.add(tf.matmul(hidden_layer2, weights['h3']), biases['b3']))
+#   prediction_norm = tf.nn.tanh(tf.add(tf.matmul(hidden_layer3, weights['out']), biases['out']), name='normalized_output')
 
-  # De-normalize output prediction
-  range_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS - LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
-  avg_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS + LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
-  prediction = tf.add(tf.multiply(prediction_norm, range_limits), avg_limits, name=output_name)
+  target_hidden_layer1 = tf.nn.relu(tf.add(tf.matmul(data,  weights['h1']), biases['b1']))
+  target_hidden_layer2 = tf.nn.relu(tf.add(tf.matmul(target_hidden_layer1, weights['h2']), biases['b2']))
+  target_hidden_layer3 = tf.nn.relu(tf.add(tf.matmul(target_hidden_layer2, weights['h3']), biases['b3']))
+  target_output_linear_velocity = tf.nn.sigmoid(tf.add(tf.matmul(target_hidden_layer3, weights['out'][:,0]), biases['out'][0]))
+  target_output_angular_velocity = tf.nn.tanh(tf.add(tf.matmul(target_hidden_layer3, weights['out'][:,1]), biases['out'][1]))
+
+#   # De-normalize output prediction
+#   range_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS - LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
+#   avg_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS + LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
+#   prediction = tf.add(tf.multiply(prediction_norm, range_limits), avg_limits, name=output_name)
+
+  action_list = []
+  action_list.append(target_output_linear_velocity)
+  action_list.append(target_output_angular_velocity) ##Change accordingly for w_max and w_min
+  prediction = tf.stack(action_list, axis = 1)
 
   return prediction, weights, biases
 

@@ -15,7 +15,8 @@ from data.data_handler import DataHandler
 import simple_model as model
 
 
-DIST_MEAS_SIZE = 36
+DIST_MEAS_SIZE = 10
+STATE_SIZE = 2
 TARGET_SIZE = 2
 CMD_SIZE = 2
 
@@ -29,7 +30,7 @@ class TrainingWrapper():
     self.custom_data_runner = None
     self.eval_n_elements = 1000
     self.eval_batch_size = 1024
-    self.max_perception_radius = 30.0
+    self.max_perception_radius = 10.0
     self.save_frequency = 40000
     self.training_data_handler = DataHandler(self.args.datafile_train, self.args.batch_size,
                                              shuffle=True, laser_subsampling=True, max_perception_radius=self.max_perception_radius)

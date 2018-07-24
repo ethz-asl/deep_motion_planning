@@ -13,7 +13,7 @@ import tensorflow as tf
 
 from data.fast_data_handler import FastDataHandler
 
-INPUT_SIZE = 38
+INPUT_SIZE = 12
 
 class CustomDataRunner():
   """Class to manage threads which fill a queue of data"""

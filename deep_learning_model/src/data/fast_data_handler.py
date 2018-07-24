@@ -163,7 +163,9 @@ class FastDataHandler():
           laser = np.minimum(chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,laser_columns].values,
               self.perception_radius)
           if self.laser_subsampling:
-            laser = sup.transform_laser(laser, self.num_dist_values)
+#             laser = sup.transform_laser(laser, self.num_dist_values)
+            laser = sup.transform_laser_tai(laser)
+            print("laser values: {}".format(laser))
 
           # Goal data: distance, angle, heading (in robot frame)
           goal =  chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,goal_columns].values

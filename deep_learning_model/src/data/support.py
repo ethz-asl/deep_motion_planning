@@ -102,3 +102,17 @@ def get_relative_angle_to_goal(position, orientation, goal_position):
     return angle - 2*np.pi
   return angle
 
+
+def transform_laser_tai(laser_data):
+  max_range = 10.0
+  number_samples = 10.0
+  laser_data = np.minimum(laser_data, max_range)
+  laser_data = laser_data / max_range
+  total_laser_samples = len(laser_data)
+  network_laser_inputs = 10
+  laser_sensor_offset = 0.0
+  laser_slice = int((2*total_laser_samples)/(3*network_laser_inputs))
+  laser_slice_offset = int(total_laser_samples/6)
+  laser_data_sampled = np.array(laser_data[laser_slice_offset:total_laser_samples - laser_slice_offset:self.laser_slice]) - laser_sensor_offset
+  return laser_data_sampled
+
