@@ -177,7 +177,7 @@ class FastDataHandler():
 
           angle = sup.transform_target_angle(angle, np.pi)
           if self.use_tai:
-            norm = sup.transform_target_distance_tai(norm)
+            norm = sup.transform_target_tai(norm)
           else:
             norm = sup.transform_target_distance(norm, self.perception_radius)
 

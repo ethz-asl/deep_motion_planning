@@ -4,7 +4,7 @@
     <remap from="scan" to="base_scan"/>
     <param name="model_path" type="string" value="$(find deep_motion_planner)/models/old_models/neg02_09_limits/2018-03-11_13-58_fc_36_shapes_10" />
     <!--param name="pickle_weights_path" type="string" value="$(find deep_motion_planner)/models/old_models/neg02_09_limits/2018-03-20_18-27_fc_36_tc_all/variables_final.p"/-->
-    <param name="pickle_weights_path" type="string" value="$(find deep_motion_planner)/trained_models_rl_nav/ddpg/office1000_ddpg/variables_final.p" />
+    <param name="pickle_weights_path" type="string" value="$(find deep_motion_planner)/trained_models_rl_nav/ddpg/pure_ddpg/weights_actor92000.p" />
     <param name="use_pickle_weights" type="bool" value="True" />
     <param name="use_checkpoints" type="bool" value="False" />
     <param name="protobuf_file" type="string" value="model.pb" />

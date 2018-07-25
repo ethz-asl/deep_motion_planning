@@ -12,7 +12,7 @@ import tensorflow.contrib as contrib
 import numpy as np
 
 # Give the model a descriptive name
-NAME = 'shapes1000_ddpg'
+NAME = 'office1000_ddpg'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 10

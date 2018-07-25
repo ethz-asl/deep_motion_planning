@@ -227,7 +227,10 @@ class DeepMotionPlanner():
 
           # Normalize / transform
           transformed_angle = sup.transform_target_angle(angle, norm_angle=np.pi)
-          transformed_norm = sup.transform_target_distance(norm, norm_range=self.max_laser_range)
+          if self.use_tai:
+            transformed_norm = sup.transform_target_tai(norm)
+          else:
+            transformed_norm = sup.transform_target_distance(norm, norm_range=self.max_laser_range)
 
 #           self.data_store["transformed_dist"].append(transformed_norm)
 #           self.data_store["transformed_angle"].append(transformed_angle)
