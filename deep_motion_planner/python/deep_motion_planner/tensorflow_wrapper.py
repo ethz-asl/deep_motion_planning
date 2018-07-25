@@ -30,7 +30,7 @@ class TensorflowWrapper():
         """
         self.last_tv = 0
         self.last_rv = 0
-        self.data_store = {"inputs": [], "outputs": []}
+#         self.data_store = {"inputs": [], "outputs": []}
 
         if filename_weights == None:
           self.init_from_graph = True
@@ -76,7 +76,7 @@ class TensorflowWrapper():
     def __exit__(self, exc_type, exc_value, traceback):
         # Make sure to close the session and clean up all the used resources
         self.sess.close()
-        pickle.dump(self.data_store, open(os.path.join('/home/pfmark/Desktop/processed_inputs_to_outputs_tai.p'), 'wb'))
+#         pickle.dump(self.data_store, open(os.path.join('/home/pfmark/Desktop/processed_inputs_to_outputs_tai.p'), 'wb'))
 
     def inference(self, data):
         """
@@ -95,8 +95,8 @@ class TensorflowWrapper():
           std_trans = 0.5
           std_rot = 0.75
 
-          self.data_store["inputs"].append(data)
-          self.data_store["outputs"].append(prediction)
+#           self.data_store["inputs"].append(data)
+#           self.data_store["outputs"].append(prediction)
 
           tv = np.maximum(-1.0, prediction[0] + np.random.normal(0, std_trans))
 #           if tv < 0.2:

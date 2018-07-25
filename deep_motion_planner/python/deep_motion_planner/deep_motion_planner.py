@@ -50,9 +50,9 @@ class DeepMotionPlanner():
     self.time_last_call = rospy.get_rostime()
     self.latest_odom = Odometry()
     self.use_tai = True
-    self.data_store = {"raw_scans": [], "transformed_scans": [],
-                       "raw_angle": [], "transformed_angle": [],
-                       "raw_dist": [], "transformed_dist": []}
+#     self.data_store = {"raw_scans": [], "transformed_scans": [],
+#                        "raw_angle": [], "transformed_angle": [],
+#                        "raw_dist": [], "transformed_dist": []}
 #     self.column_line = ['count'] + \
 #                        ['laser_raw' + str(i) for i in range(self.num_raw_laser_scans)] + \
 #                        ['target_global_frame_x', 'target_global_frame_y', 'target_global_frame_yaw',
@@ -128,7 +128,7 @@ class DeepMotionPlanner():
     # Make sure to stop the thread properly
     self.interrupt_event.set()
     self.processing_thread.join()
-    pickle.dump(self.data_store, open(os.path.join('/home/pfmark/Desktop/raw_to_processed_inputs_tai.p'), 'wb'))
+#     pickle.dump(self.data_store, open(os.path.join('/home/pfmark/Desktop/raw_to_processed_inputs_tai.p'), 'wb'))
 
   def scan_callback(self, data):
     """
@@ -186,7 +186,7 @@ class DeepMotionPlanner():
 
           cropped_scans = util.adjust_laser_scans_to_model(self.last_scan.ranges, self.laser_scan_stride, self.n_laser_scans, perception_radius = 100.0)
 
-          self.data_store["raw_scans"].append(cropped_scans)
+#           self.data_store["raw_scans"].append(cropped_scans)
 
           # Convert scans to numpy array
           cropped_scans_np = np.atleast_2d(np.array(cropped_scans))
@@ -196,7 +196,7 @@ class DeepMotionPlanner():
           else:
             transformed_scans = sup.transform_laser_mix(cropped_scans_np)
 
-          self.data_store["transformed_scans"].append(transformed_scans)
+#           self.data_store["transformed_scans"].append(transformed_scans)
 
           if any(np.isnan(cropped_scans)) or any(np.isinf(cropped_scans)):
             rospy.logerr('Scan contained invalid float (nan or inf)')
@@ -222,15 +222,15 @@ class DeepMotionPlanner():
           angle = np.arctan2(goal[1],goal[0])
           norm = np.minimum(np.linalg.norm(goal[0:2], ord=2), self.max_laser_range)
 
-          self.data_store["raw_dist"].append(norm)
-          self.data_store["raw_angle"].append(angle)
+#           self.data_store["raw_dist"].append(norm)
+#           self.data_store["raw_angle"].append(angle)
 
           # Normalize / transform
           transformed_angle = sup.transform_target_angle(angle, norm_angle=np.pi)
           transformed_norm = sup.transform_target_distance(norm, norm_range=self.max_laser_range)
 
-          self.data_store["transformed_dist"].append(transformed_norm)
-          self.data_store["transformed_angle"].append(transformed_angle)
+#           self.data_store["transformed_dist"].append(transformed_norm)
+#           self.data_store["transformed_angle"].append(transformed_angle)
 
           data = np.stack((transformed_angle, transformed_norm, goal[2]))
   #         data = np.stack((angle, norm, goal[2]))
