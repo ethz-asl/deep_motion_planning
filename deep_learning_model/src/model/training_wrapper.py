@@ -16,7 +16,7 @@ import simple_model as model
 
 
 DIST_MEAS_SIZE = 10
-STATE_SIZE = 0
+STATE_SIZE = 2
 TARGET_SIZE = 2
 CMD_SIZE = 2
 

@@ -13,7 +13,7 @@ import tensorflow as tf
 
 from data.fast_data_handler import FastDataHandler
 
-USE_VEL = False
+USE_VEL = True
 if USE_VEL:
   INPUT_SIZE = 14
 else:

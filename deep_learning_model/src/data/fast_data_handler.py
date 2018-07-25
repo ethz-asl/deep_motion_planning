@@ -164,7 +164,7 @@ class FastDataHandler():
               self.perception_radius)
           if self.laser_subsampling:
 #             laser = sup.transform_laser(laser, self.num_dist_values)
-            laser = sup.transform_laser_mix(laser)
+            laser = sup.transform_laser_tai(laser)
 
           # Goal data: distance, angle, heading (in robot frame)
           goal =  chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,goal_columns].values

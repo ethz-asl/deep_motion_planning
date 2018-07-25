@@ -4,6 +4,7 @@ import os
 import sys
 import numpy as np
 import rospkg
+import cPickle as pickle
 
 sys.path.append(os.path.join(rospkg.RosPack().get_path('deep_motion_planner'), "../deep_learning_model/src/model"))
 import simple_model as model
@@ -29,6 +30,7 @@ class TensorflowWrapper():
         """
         self.last_tv = 0
         self.last_rv = 0
+        self.data_store = {"inputs": [], "outputs": []}
 
         if filename_weights == None:
           self.init_from_graph = True
@@ -60,7 +62,7 @@ class TensorflowWrapper():
         else:
           self.init_from_graph = False
           self.sess = tf.Session()
-          self.input_data_placeholder = tf.placeholder(tf.float32, shape=[1, 12], name="input_data_placeholder")
+          self.input_data_placeholder = tf.placeholder(tf.float32, shape=[1, 14], name="input_data_placeholder")
           self.keep_prob_placeholder = tf.placeholder(tf.float32, name="keep_prob_placeholder")
           self.model_inference, _, _ = model.inference(self.input_data_placeholder, self.keep_prob_placeholder, 1,
                                                        training=False, reuse=True, output_name='model_inference',
@@ -74,6 +76,7 @@ class TensorflowWrapper():
     def __exit__(self, exc_type, exc_value, traceback):
         # Make sure to close the session and clean up all the used resources
         self.sess.close()
+        pickle.dump(self.data_store, open(os.path.join('/home/pfmark/Desktop/processed_inputs_to_outputs_tai.p'), 'wb'))
 
     def inference(self, data):
         """
@@ -89,10 +92,13 @@ class TensorflowWrapper():
           feed_dict = {self.input_data_placeholder: [data],
                        self.keep_prob_placeholder: 1.0}
           prediction = self.sess.run(self.model_inference, feed_dict=feed_dict)[0]
-          std_trans = 0.0
-          std_rot = 0.0
+          std_trans = 0.5
+          std_rot = 0.75
 
-          tv = np.maximum(-0.0, prediction[0] + np.random.normal(0, std_trans))
+          self.data_store["inputs"].append(data)
+          self.data_store["outputs"].append(prediction)
+
+          tv = np.maximum(-1.0, prediction[0] + np.random.normal(0, std_trans))
 #           if tv < 0.2:
 #             tv *= 2
 #           tv = np.minimum(tv, 0.7)
@@ -105,6 +111,7 @@ class TensorflowWrapper():
           self.last_tv = tv
           rv_filtered = lambda_rv * rv + (1-lambda_rv) * self.last_rv
           self.last_rv = rv
+
 
           return (tv_filtered, rv_filtered)
 

@@ -12,12 +12,12 @@ import tensorflow.contrib as contrib
 import numpy as np
 
 # Give the model a descriptive name
-NAME = 'shapes1000_ddpg_pool_noVel_tanh'
+NAME = 'shapes1000_ddpg'
 
 # The size of the input layer
 N_RANGE_FINDINGS = 10
 N_TARGET = 2
-N_STATE = 0
+N_STATE = 2
 INPUT_SIZE = N_RANGE_FINDINGS + N_TARGET + N_STATE
 
 # The size of the output layer
