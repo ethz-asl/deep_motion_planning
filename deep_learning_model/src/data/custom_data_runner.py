@@ -13,8 +13,8 @@ import tensorflow as tf
 
 from data.fast_data_handler import FastDataHandler
 
-USE_VEL = True
-if USE_VEL:
+USE_TAI = True
+if USE_TAI:
   INPUT_SIZE = 14
 else:
   INPUT_SIZE = 12
@@ -26,7 +26,7 @@ class CustomDataRunner():
       self.batch_size = batch_size
       self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_subsampling=True,
                                           max_perception_radius=max_perception_radius,
-                                          use_odom_vel=USE_VEL)
+                                          use_tai=USE_TAI)
       self.data_x = tf.placeholder(dtype=tf.float32, shape=[None, INPUT_SIZE])
       self.data_y = tf.placeholder(dtype=tf.float32, shape=[None, 2])
 

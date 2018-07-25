@@ -12,13 +12,13 @@ import support as sup
 class FastDataHandler():
   """Class to load data from HDF5 storages in a random and chunckwise manner"""
   def __init__(self, filepath, batchsize = 16, chunksize=None, max_perception_radius=30.0,
-               mean_filter_size=5, laser_subsampling=False, num_dist_values = 36, use_odom_vel=False):
+               mean_filter_size=5, laser_subsampling=False, num_dist_values = 36, use_tai=False):
     self.filepath = filepath
     self.chunksize = chunksize
     self.batchsize = batchsize
     self.perception_radius = max_perception_radius
     self.mean_filter_size = mean_filter_size
-    self.use_odom_vel = use_odom_vel
+    self.use_tai = use_tai
     self.laser_subsampling = laser_subsampling
     self.num_dist_values = 10
 
@@ -103,7 +103,7 @@ class FastDataHandler():
             window=self.mean_filter_size, center=True).mean().fillna(chunk['angular_z_command'])
 
         # Velocity measurements (odometry)
-        if self.use_odom_vel:
+        if self.use_tai:
           chunk['filtered_linear_odom'] = pd.Series.rolling(chunk['linear_x_odom'],
               window=self.mean_filter_size, center=True).mean().fillna(chunk['linear_x_odom'])
           chunk['filtered_angular_odom'] = pd.Series.rolling(chunk['angular_z_odom'],
@@ -164,7 +164,10 @@ class FastDataHandler():
               self.perception_radius)
           if self.laser_subsampling:
 #             laser = sup.transform_laser(laser, self.num_dist_values)
-            laser = sup.transform_laser_tai(laser)
+            if self.use_tai:
+              laser = sup.transform_laser_tai(laser)
+            else:
+              laser = sup.transform_laser_mix(laser)
 
           # Goal data: distance, angle, heading (in robot frame)
           goal =  chunk.iloc[j*self.batchsize:(j+1)*self.batchsize,goal_columns].values
@@ -173,13 +176,16 @@ class FastDataHandler():
             axis=1).reshape([self.batchsize, 1]), self.perception_radius)
 
           angle = sup.transform_target_angle(angle, np.pi)
-          norm = sup.transform_target_distance(norm, self.perception_radius)
+          if self.use_tai:
+            norm = sup.transform_target_distance_tai(norm)
+          else:
+            norm = sup.transform_target_distance(norm, self.perception_radius)
 
           # Velocity measurements (current velocity of robot)
           odom_vel = chunk.iloc[j*self.batchsize:(j+1)*self.batchsize, odom_vel_columns].values
 
           # Concatenate data: laser, goal angle, goal distance, goal heading
-          if self.use_odom_vel:
+          if self.use_tai:
             data = np.concatenate((laser, angle, norm, odom_vel), axis=1)
           else:
             data = np.concatenate((laser, angle, norm), axis=1)

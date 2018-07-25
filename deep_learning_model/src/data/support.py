@@ -119,6 +119,8 @@ def transform_laser_tai(laser_data):
   laser_data_sampled = laser_data[:, laser_idxs_sampled] - laser_sensor_offset
   return laser_data_sampled
 
+def transform_target_tai(target_distance, norm_range=10.0):
+  return target_distance / norm_range
 
 def transform_laser_mix(laser_data):
   max_range = 10.0
