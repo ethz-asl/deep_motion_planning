@@ -49,7 +49,7 @@ class DeepMotionPlanner():
     self.num_raw_laser_scans = 1080
     self.time_last_call = rospy.get_rostime()
     self.latest_odom = Odometry()
-    self.use_tai = True
+    self.use_tai = False
 #     self.data_store = {"raw_scans": [], "transformed_scans": [],
 #                        "raw_angle": [], "transformed_angle": [],
 #                        "raw_dist": [], "transformed_dist": []}

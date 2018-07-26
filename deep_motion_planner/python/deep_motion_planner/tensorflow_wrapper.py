@@ -62,7 +62,7 @@ class TensorflowWrapper():
         else:
           self.init_from_graph = False
           self.sess = tf.Session()
-          self.input_data_placeholder = tf.placeholder(tf.float32, shape=[1, 14], name="input_data_placeholder")
+          self.input_data_placeholder = tf.placeholder(tf.float32, shape=[1, 12], name="input_data_placeholder")
           self.keep_prob_placeholder = tf.placeholder(tf.float32, name="keep_prob_placeholder")
           self.model_inference, _, _ = model.inference(self.input_data_placeholder, self.keep_prob_placeholder, 1,
                                                        training=False, reuse=True, output_name='model_inference',
