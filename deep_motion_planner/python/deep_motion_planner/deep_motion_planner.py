@@ -31,7 +31,6 @@ import numpy as np
 # Utils
 import util
 
-USE_CONV_MODEL = True
 
 class DeepMotionPlanner():
   """Use a deep neural network for motion planning"""
@@ -43,12 +42,7 @@ class DeepMotionPlanner():
     self.send_motion_commands = True
     self.base_position = None
     self.base_orientation = None
-    self.max_laser_range = 20.0
-    if USE_CONV_MODEL:
-      self.num_subsampled_scans = 1080
-    else:
-      self.num_subsampled_scans = 36
-    self.input_dim = self.num_subsampled_scans + 2
+    self.max_laser_range = 30.0
     self.num_raw_laser_scans = 1080
     self.time_last_call = rospy.get_rostime()
 
@@ -64,6 +58,14 @@ class DeepMotionPlanner():
     self.use_pickle_weights = rospy.get_param('~use_pickle_weights', default=False)
     self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
     self.use_checkpoints = rospy.get_param('~use_checkpoints', default=False)
+    self.use_conv_model = rospy.get_param('~use_conv_model', default=False)
+
+    if self.use_conv_model:
+      self.num_subsampled_scans = 1080
+    else:
+      self.num_subsampled_scans = 36
+    self.input_dim = self.num_subsampled_scans + 2
+
     if not os.path.exists(self.model_path):
       rospy.logerr('Model path does not exist: {}'.format(self.model_path))
       rospy.logerr('Please check the parameter: {}'.format(rospy.resolve_name('~model_path')))

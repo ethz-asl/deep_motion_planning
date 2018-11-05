@@ -8,5 +8,6 @@
     <param name="use_pickle_weights" type="bool" value="False" />
     <param name="use_checkpoints" type="bool" value="False" />
     <param name="protobuf_file" type="string" value="model.pb" />
+    <param name="use_conv_model" type="bool" value="True" />
   </node>
 </launch>
