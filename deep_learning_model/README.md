@@ -15,9 +15,9 @@ refer to the Makefile to change the files and folders that are used for the data
 ```
 make train
 ```
-This will start the training of your model. Please refer to the Makefile to change the files and folders
-that are used during training. Furthermore, we set some metaparameters (initial learning rate,
-maximum number of steps and the batch size) in this file.
+This will start the training of your model. Please refer to the `Makefile` to change the files and folders
+that are used during training. We also set some metaparameters (initial learning rate,
+maximum number of steps and the batch size) in this file. Furthermore, in the `Makefile` you can add the option `--use_conv_model` to the command line options of `train_model.py`. With this option enabled, the [convolutional network structure](https://arxiv.org/pdf/1609.07910.pdf) will be selected. Otherwise, the [fully connected structure](https://arxiv.org/pdf/1805.07095.pdf) is used.  
 
 ### Tensorboard
 
