@@ -12,12 +12,19 @@ import cPickle as pickle
 
 from data.custom_data_runner import CustomDataRunner
 from data.data_handler import DataHandler
-import simple_model as model
 
+use_conv_model = True
 
-DIST_MEAS_SIZE = 36
-TARGET_SIZE = 2
-CMD_SIZE = 2
+if use_conv_model:
+  import conv_model as model
+  DIST_MEAS_SIZE = 1080
+  TARGET_SIZE = 2
+  CMD_SIZE = 2
+else:
+  import simple_model as model
+  DIST_MEAS_SIZE = 36
+  TARGET_SIZE = 2
+  CMD_SIZE = 2
 
 class TrainingWrapper():
   """Wrap the training"""
@@ -30,9 +37,7 @@ class TrainingWrapper():
     self.eval_n_elements = 1000
     self.eval_batch_size = 1024
     self.max_perception_radius = 30.0
-    self.save_frequency = 40000
-    self.training_data_handler = DataHandler(self.args.datafile_train, self.args.batch_size,
-                                             shuffle=True, laser_subsampling=True, max_perception_radius=self.max_perception_radius)
+    self.save_frequency = 20000
 
   def __enter__(self):
     return self
@@ -76,29 +81,30 @@ class TrainingWrapper():
       self.sess = tf.Session(config=config)
 
       logger.info('Create the data runner for the input data')
-      self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**14, max_perception_radius=self.max_perception_radius)
+      self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**14,
+                                                  max_perception_radius=self.max_perception_radius)
       data_batch, cmd_batch = self.custom_data_runner.get_inputs()
 
       logger.info('Data batch size: {}'.format(data_batch.shape))
 
       logger.info('Add operations to the computation graph')
       keep_prob_placeholder = tf.placeholder(tf.float32, name='keep_prob_placeholder')
-      prediction, _, _ = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size, output_name='prediction')
+      prediction = model.inference(data_batch, keep_prob_placeholder, self.args.batch_size, output_name='prediction')
 
       loss, loss_split = model.loss(prediction, cmd_batch)
 
       train_op = model.training(loss, loss_split, learning_rate, global_step)
 
       eval_data_placeholder, eval_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE, CMD_SIZE, 'eval_data_input')
-      eval_prediction, weights_node, biases_node = model.inference(eval_data_placeholder, keep_prob_placeholder,
+      eval_prediction = model.inference(eval_data_placeholder, keep_prob_placeholder,
           self.eval_batch_size, training=False, reuse=True, output_name='eval_prediction')
       eval_predictions_placeholder = tf.placeholder(tf.float32, shape=[self.eval_n_elements,2])
       evaluation, evaluation_split = model.evaluation(eval_predictions_placeholder, eval_cmd_placeholder)
 
       # This model is saved with the trained weights and can direclty be executed
       exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(DIST_MEAS_SIZE+TARGET_SIZE, CMD_SIZE)
-      model_inference, _, _ = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
-                                              training=False, reuse=True, output_name='model_inference')
+      model_inference = model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
+                                        training=False, reuse=True, output_name='model_inference')
 
       # Variables to use in the summary (shown in tensorboard)
       train_loss = tf.summary.scalar('loss', loss)
@@ -222,16 +228,10 @@ class TrainingWrapper():
           filename = os.path.join(storage_path, 'snap')
           saver.save(self.sess, filename, global_step=step)
 
-          weights_store, biases_store = self.sess.run([weights_node, biases_node])
-          pickle.dump((weights_store, biases_store), open(os.path.join(storage_path, 'variables_{}.p'.format(step)), 'wb'))
-
-
       logger.info('Save final model snapshot')
       filename = os.path.join(storage_path, 'final')
       saver.save(self.sess, filename)
 
-      weights_store, biases_store = self.sess.run([weights_node, biases_node])
-      pickle.dump((weights_store, biases_store), open(os.path.join(storage_path, 'variables_final.p'), 'wb'))
 
       # Save the model with weights in one file
       # This will only capture the operations used to generate the prediction. It also

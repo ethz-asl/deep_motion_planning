@@ -13,7 +13,7 @@ class TensorflowWrapper():
     The class is used to load a pretrained tensorflow model and
     use it on live sensor data
     """
-    def __init__(self, storage_path, protobuf_file='graph.pb', use_checkpoints=False, filename_weights=None):
+    def __init__(self, storage_path, protobuf_file='graph.pb', use_checkpoints=False, filename_weights=None, input_dim = 38):
         """Initialize a new TensorflowWrapper object
 
         @param storage_path: The path to the protobuf_file and the snapshots
@@ -60,7 +60,7 @@ class TensorflowWrapper():
         else:
           self.init_from_graph = False
           self.sess = tf.Session()
-          self.input_data_placeholder = tf.placeholder(tf.float32, shape=[1, 38], name="input_data_placeholder")
+          self.input_data_placeholder = tf.placeholder(tf.float32, shape=[1, input_dim], name="input_data_placeholder")
           self.keep_prob_placeholder = tf.placeholder(tf.float32, name="keep_prob_placeholder")
           self.model_inference, _, _ = model.inference(self.input_data_placeholder, self.keep_prob_placeholder, 1,
                                                        training=False, reuse=True, output_name='model_inference',
@@ -80,14 +80,16 @@ class TensorflowWrapper():
         Take the given data and perform the model inference on it
         """
         if self.init_from_graph:
-          feed_dict = {'data_input:0': [data], 'keep_prob_placeholder:0': 1.0}
+#           feed_dict = {'data_input:0': [data], 'keep_prob_placeholder:0': 1.0}
+          feed_dict = {'data_input:0': [data]}
 
           prediction = self.sess.run(['model_inference:0'], feed_dict=feed_dict)[0]
 
           return (np.maximum(0.0, prediction[0,0]), prediction[0,1])
         else:
-          feed_dict = {self.input_data_placeholder: [data],
-                       self.keep_prob_placeholder: 1.0}
+#           feed_dict = {self.input_data_placeholder: [data],
+#                        self.keep_prob_placeholder: 1.0}
+          feed_dict = {self.input_data_placeholder: [data]}
           prediction = self.sess.run(self.model_inference, feed_dict=feed_dict)[0]
           std_trans = 0.1
           std_rot = 0.1

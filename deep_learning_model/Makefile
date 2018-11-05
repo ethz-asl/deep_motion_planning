@@ -13,7 +13,7 @@ USERNAME = pfmark
 
 # Training parameters
 LEARNING_RATE = 0.0001
-TRAINING_STEPS = 100000
+TRAINING_STEPS = 500000
 BATCH_SIZE = 128
 
 #################################################################################
@@ -35,7 +35,7 @@ eval:
 																		../deep_motion_planner/models/model.pb
 																		
 sync-gpu: 
-	rsync -av --progress --exclude models/ --exclude data/raw * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/training/imitation_learning/
+	rsync -av --progress --exclude models/ --exclude data/raw --exclude data/processed * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/training/imitation_learning/
 	
 train-gpu:
 	rsync -av --progress --exclude models/ --exclude data/raw * $(USERNAME)@$(GPU_MACHINE):/home/$(USERNAME)/training/imitation_learning/

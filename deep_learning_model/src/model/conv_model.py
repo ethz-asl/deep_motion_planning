@@ -88,7 +88,7 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
   """
   # slice 709 elements to get the correct size for the next convolutions
   laser = tf.slice(data, [0, 0], [sample_size, 1080])
-  goal = tf.slice(data, [0, 1080], [sample_size, 3])
+  goal = tf.slice(data, [0, 1080], [sample_size, 2])
 
   laser = tf.reshape(laser, [sample_size, 1, 1080, 1])  # format into [batch_size, height, width, channels]
 

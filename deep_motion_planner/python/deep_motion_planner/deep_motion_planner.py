@@ -43,7 +43,8 @@ class DeepMotionPlanner():
     self.base_position = None
     self.base_orientation = None
     self.max_laser_range = 20.0
-    self.num_subsampled_scans = 36
+    self.num_subsampled_scans = 1080
+    self.input_dim = self.num_subsampled_scans + 2
     self.num_raw_laser_scans = 1080
     self.time_last_call = rospy.get_rostime()
 #     self.column_line = ['count'] + \
@@ -143,7 +144,7 @@ class DeepMotionPlanner():
     else:
       filename_weights = None
     with TensorflowWrapper(self.model_path, protobuf_file=self.protobuf_file, use_checkpoints=self.use_checkpoints,
-                           filename_weights=filename_weights) as tf_wrapper:
+                           filename_weights=filename_weights, input_dim=self.input_dim) as tf_wrapper:
       next_call = time.time()
       # Stop if the interrupt is requested
       cnt = 1
@@ -220,17 +221,6 @@ class DeepMotionPlanner():
           input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2]
 
           (base_position,base_orientation) = self.transform_listener.lookupTransform('/map', '/base_link', rospy.Time())
-
-  #         target_orientation = self.target_pose.target_pose.pose.orientation
-  #
-  #         new_row = [cnt] + \
-  #                   cropped_scans + \
-  #                   [self.target_pose.target_pose.pose.position.x, self.target_pose.target_pose.pose.position.y, sup.get_yaw_from_quat(target_orientation)] + \
-  #                   [base_position[0], base_position[1], tf.transformations.euler_from_quaternion(base_orientation)[2]] + \
-  #                   list(transformed_scans.tolist()[0]) + \
-  #                   data.tolist()[0:2]
-  #         self.writer.writerow(new_row)
-  #         cnt += 1
 
           linear_x, angular_z = tf_wrapper.inference(input_data)
 

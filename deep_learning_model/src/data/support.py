@@ -15,14 +15,17 @@ def subsample_laser(laser_data, num_chunks):
   """
   num_laser = laser_data.shape[1]
 
-  values_per_chunk = int(num_laser / num_chunks)
+  if num_chunks == num_laser:
+    return laser_data
+  else:
+    values_per_chunk = int(num_laser / num_chunks)
 
-  laser_min_chunks = np.zeros([laser_data.shape[0], num_chunks])
+    laser_min_chunks = np.zeros([laser_data.shape[0], num_chunks])
 
-  for ii in range(num_chunks):
-    laser_min_chunks[:, ii] = np.min(laser_data[:, ii*values_per_chunk:(ii+1)*values_per_chunk], axis=1)
+    for ii in range(num_chunks):
+      laser_min_chunks[:, ii] = np.min(laser_data[:, ii*values_per_chunk:(ii+1)*values_per_chunk], axis=1)
 
-  return laser_min_chunks
+    return laser_min_chunks
 
 
 def crop_laser(laser_data, max_range=30.0):

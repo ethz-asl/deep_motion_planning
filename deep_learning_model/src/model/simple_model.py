@@ -175,7 +175,7 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
   avg_limits = tf.convert_to_tensor((UPPER_ACTION_LIMITS + LOWER_ACTION_LIMITS) / 2., dtype=tf.float32)
   prediction = tf.add(tf.multiply(prediction_norm, range_limits), avg_limits, name=output_name)
 
-  return prediction, weights, biases
+  return prediction
 
 def loss(prediction, cmd):
   """

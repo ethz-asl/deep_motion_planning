@@ -13,14 +13,22 @@ import tensorflow as tf
 
 from data.fast_data_handler import FastDataHandler
 
-INPUT_SIZE = 38
+use_conv_model = True
+
+if use_conv_model:
+  LASER_DIM = 1080
+else:
+  LASER_DIM = 36
+
+TARGET_DIM = 2
+INPUT_SIZE = LASER_DIM + TARGET_DIM
 
 class CustomDataRunner():
   """Class to manage threads which fill a queue of data"""
   def __init__(self, filepath, batch_size, chunksize, max_perception_radius=30.0):
     with tf.device("/cpu:0"):
       self.batch_size = batch_size
-      self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_subsampling=True, max_perception_radius=max_perception_radius)
+      self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_subsampling=True, max_perception_radius=max_perception_radius, num_dist_values=LASER_DIM)
       self.data_x = tf.placeholder(dtype=tf.float32, shape=[None, INPUT_SIZE])
       self.data_y = tf.placeholder(dtype=tf.float32, shape=[None, 2])
 
