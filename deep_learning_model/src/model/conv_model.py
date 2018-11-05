@@ -95,6 +95,7 @@ def inference(data, keep_prob, sample_size, training=True, reuse=False, regulari
   hidden_1 = conv2d(laser, 64, [1,7], stride=3, normalizer_fn=batch_norm,
       weights_initializer=xavier_initializer_conv2d(),
       weights_regularizer=l1_regularizer(0.001), reuse=reuse, trainable=training, scope='layer_scope_1')
+  hidden_1 = tf.nn.dropout(hidden_1, keep_prob=keep_prob, name='dropout_1')
   hidden_1 = contrib.layers.max_pool2d(hidden_1, [1,3],[1,3], 'SAME')
   print("hidden_1: {}".format(hidden_1.get_shape()))
   hidden_2 = conv2d(hidden_1, 64, [1,3], normalizer_fn=batch_norm,

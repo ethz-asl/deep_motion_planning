@@ -53,6 +53,14 @@ class TrainingWrapper():
     if self.sess:
       self.sess.close()
 
+  def get_model_name(self):
+    train_dataset = self.args.datafile_train[:-3]
+    training_steps = str(self.args.max_steps / 1000) + 'k'
+    use_conv = 'conv' if self.args.use_conv_model else 'fc'
+    model_name = os.path.split(train_dataset + '_' + training_steps + '_' + use_conv)[-1]
+    print("{}: Save model under {}".format(self.__class__.__name__, model_name))
+    return model_name
+
   def placeholder_inputs(self, data_size, cmd_size, data_placeholder_name='data_input'):
     """Create placeholders for the tf graph"""
     data_placeholder = tf.placeholder(tf.float32, shape=[None, data_size], name=data_placeholder_name)
@@ -70,14 +78,14 @@ class TrainingWrapper():
     logger = logging.getLogger(__name__)
 
     # Folder where to store snapshots, meta data and the final model
-    storage_path = os.path.join(self.args.train_dir, (time.strftime('%Y-%m-%d_%H-%M_') + self.model.NAME))
+    storage_path = os.path.join(self.args.train_dir, (time.strftime('%Y-%m-%d_%H-%M_') + self.get_model_name()))
 
     logger.info('Build Tensorflow Graph')
     with tf.Graph().as_default():
 
       # Define the used machine learning model
       global_step, learning_rate = self.model.learning_rate(self.args.learning_rate)
-      config = tf.ConfigProto(gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2), device_count = {'GPU': 1},
+      config = tf.ConfigProto(gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5), device_count = {'GPU': 1},
                               intra_op_parallelism_threads = 8)
 
       self.sess = tf.Session(config=config)
@@ -167,7 +175,10 @@ class TrainingWrapper():
       for step in range(self.args.max_steps):
         start_time = time.time()
 
-        feed_dict = {keep_prob_placeholder: 0.5}
+        if self.args.use_conv_model:
+          feed_dict = {keep_prob_placeholder: 1.0}
+        else:
+          feed_dict = {keep_prob_placeholder: 0.5}
         _, loss_value, loss_split_value, summary_str = self.sess.run([train_op, loss, loss_split, summary_op],
             feed_dict=feed_dict)
 
