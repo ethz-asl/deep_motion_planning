@@ -13,28 +13,28 @@ import tensorflow as tf
 
 from data.fast_data_handler import FastDataHandler
 
-use_conv_model = True
-
-if use_conv_model:
-  LASER_DIM = 1080
-else:
-  LASER_DIM = 36
-
-TARGET_DIM = 2
-INPUT_SIZE = LASER_DIM + TARGET_DIM
 
 class CustomDataRunner():
   """Class to manage threads which fill a queue of data"""
-  def __init__(self, filepath, batch_size, chunksize, max_perception_radius=30.0):
+  def __init__(self, filepath, batch_size, chunksize, max_perception_radius=30.0, use_conv_model=False):
+    if use_conv_model:
+      self.laser_dim = 1080
+    else:
+      self.laser_dim = 36
+
+    self.target_dim = 2
+    self.input_size = self.laser_dim + self.target_dim
+
     with tf.device("/cpu:0"):
       self.batch_size = batch_size
-      self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_subsampling=True, max_perception_radius=max_perception_radius, num_dist_values=LASER_DIM)
-      self.data_x = tf.placeholder(dtype=tf.float32, shape=[None, INPUT_SIZE])
+      self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_subsampling=True,
+                                          max_perception_radius=max_perception_radius, num_dist_values=self.laser_dim)
+      self.data_x = tf.placeholder(dtype=tf.float32, shape=[None, self.input_size])
       self.data_y = tf.placeholder(dtype=tf.float32, shape=[None, 2])
 
       # The actual queue of data. The queue contains a vector for
       # the mnist features, and a scalar label.
-      self.queue = tf.RandomShuffleQueue(shapes=[[INPUT_SIZE], [2]],
+      self.queue = tf.RandomShuffleQueue(shapes=[[self.input_size], [2]],
                       dtypes=[tf.float32, tf.float32],
                       capacity=2000,
                       min_after_dequeue=1000)

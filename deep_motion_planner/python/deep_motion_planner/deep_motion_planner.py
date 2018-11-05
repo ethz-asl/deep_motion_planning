@@ -20,7 +20,6 @@ from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction, MoveBaseFeedback
 from sensor_msgs.msg import Joy
 from nav_msgs.msg import Path
 import rospkg
-# print("Current path: {}".format(os.path.dirname(os.path.abspath(__file__))))
 import support as sup
 
 
@@ -31,6 +30,8 @@ import numpy as np
 
 # Utils
 import util
+
+USE_CONV_MODEL = True
 
 class DeepMotionPlanner():
   """Use a deep neural network for motion planning"""
@@ -43,25 +44,13 @@ class DeepMotionPlanner():
     self.base_position = None
     self.base_orientation = None
     self.max_laser_range = 20.0
-    self.num_subsampled_scans = 1080
+    if USE_CONV_MODEL:
+      self.num_subsampled_scans = 1080
+    else:
+      self.num_subsampled_scans = 36
     self.input_dim = self.num_subsampled_scans + 2
     self.num_raw_laser_scans = 1080
     self.time_last_call = rospy.get_rostime()
-#     self.column_line = ['count'] + \
-#                        ['laser_raw' + str(i) for i in range(self.num_raw_laser_scans)] + \
-#                        ['target_global_frame_x', 'target_global_frame_y', 'target_global_frame_yaw',
-#                         'robot_pose_global_frame_x', 'robot_pose_global_frame_y', 'robot_pose_global_frame_yaw'] + \
-#                        ['laser_input_model' + str(i) for i in range(self.num_subsampled_scans)] + \
-#                        ['goal_distance', 'goal_angle']
-#
-#     date_str = datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')
-#     self.storage_path = os.path.join('/home/pfmark/Desktop/dump', date_str)
-#     print("Logging under: {}".format(self.storage_path))
-#     os.mkdir(self.storage_path)
-#
-#     self.output_file = open(os.path.join(self.storage_path, 'logging_data.csv'), 'wb')
-#     self.writer= csv.writer(self.output_file, delimiter=',')
-#     self.writer.writerow(self.column_line)
 
     # Load various ROS parameters
     if not rospy.has_param('~model_path'):

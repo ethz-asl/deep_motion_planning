@@ -28,7 +28,7 @@ data:
 
 train:
 	python src/model/train_model.py data/processed/$(DATASET).h5 \
-				 													-l $(LEARNING_RATE) -s $(TRAINING_STEPS) -b $(BATCH_SIZE) --mail
+				 													-l $(LEARNING_RATE) -s $(TRAINING_STEPS) -b $(BATCH_SIZE) --mail --use_conv_model
 
 eval:
 	python src/model/predict_model.py -c reports/evaluation.csv data/processed/$(DATASET_EVAL).h5 \

@@ -37,6 +37,8 @@ def parse_args():
             file', type=str)
   parser.add_argument('-m', '--mail', help='Send an email when training finishes',
       action='store_true')
+  parser.add_argument('--use_conv_model', help='Use the CNN model for the end-to-end policy. Otherwise a simple FC model will be used.',
+      action='store_true')
   args = parser.parse_args()
 
   return args
