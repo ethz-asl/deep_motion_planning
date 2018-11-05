@@ -78,7 +78,7 @@ class TrainingWrapper():
     logger = logging.getLogger(__name__)
 
     # Folder where to store snapshots, meta data and the final model
-    storage_path = os.path.join(self.args.train_dir, (time.strftime('%Y-%m-%d_%H-%M_') + self.get_model_name()))
+    storage_path = os.path.join(self.args.train_dir, (self.get_model_name() + '_' + time.strftime('%Y-%m-%d_%H-%M')))
 
     logger.info('Build Tensorflow Graph')
     with tf.Graph().as_default():
