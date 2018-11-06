@@ -5,14 +5,14 @@ import support as sup
 
 class DataHandler():
   """Class to load data from HDF5 storages in a random and chunkwise manner"""
-  def __init__(self, filepath, chunksize=1000, shuffle = True, laser_subsampling = False, num_dist_values = 36, max_perception_radius=30.0):
+  def __init__(self, filepath, chunksize=1000, shuffle = True, laser_transform = False, num_dist_values = 36, max_perception_radius=30.0):
     self.filepath = filepath
     self.chunksize = chunksize
     self.shuffle = shuffle
     self.perception_radius = max_perception_radius
     self.mean_filter_size = 5
     self.use_odom_vel = False
-    self.laser_subsampling = laser_subsampling
+    self.laser_transform = laser_transform
     self.num_dist_values = num_dist_values
     self.current_chunk_idx = 0
 
@@ -108,7 +108,7 @@ class DataHandler():
         laser_columns = laser_columns[0:-1]
 
     laser = np.minimum(df.iloc[:,laser_columns].values, self.perception_radius)
-    if self.laser_subsampling:
+    if self.laser_transform:
       laser = sup.transform_laser(laser, self.num_dist_values)
     goal = df.iloc[:,goal_columns].values
     angle = np.arctan2(goal[:,1],goal[:,0]).reshape([self.chunksize, 1])

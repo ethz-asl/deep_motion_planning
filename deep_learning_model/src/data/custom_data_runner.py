@@ -27,7 +27,7 @@ class CustomDataRunner():
 
     with tf.device("/cpu:0"):
       self.batch_size = batch_size
-      self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_subsampling=True,
+      self.data_handler = FastDataHandler(filepath, batch_size, chunksize, laser_transform=True,
                                           max_perception_radius=max_perception_radius, num_dist_values=self.laser_dim)
       self.data_x = tf.placeholder(dtype=tf.float32, shape=[None, self.input_size])
       self.data_y = tf.placeholder(dtype=tf.float32, shape=[None, 2])
