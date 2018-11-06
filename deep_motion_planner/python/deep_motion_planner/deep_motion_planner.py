@@ -46,25 +46,10 @@ class DeepMotionPlanner():
     self.num_raw_laser_scans = 1080
     self.time_last_call = rospy.get_rostime()
 
-    # Load various ROS parameters
+    # Model paths
     if not rospy.has_param('~model_path'):
       rospy.logerr('Missing parameter: ~model_path')
       exit()
-
-    self.laser_scan_stride = rospy.get_param('~laser_scan_stride', default=1) # Take every ith element
-    self.n_laser_scans = rospy.get_param('~n_laser_scans', default=1080) # Cut n elements from the center to adjust the length
-    self.model_path = rospy.get_param('~model_path')
-    self.pickle_weights_path = rospy.get_param('~pickle_weights_path', default=None)
-    self.use_pickle_weights = rospy.get_param('~use_pickle_weights', default=False)
-    self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
-    self.use_checkpoints = rospy.get_param('~use_checkpoints', default=False)
-    self.use_conv_model = rospy.get_param('~use_conv_model', default=False)
-
-    if self.use_conv_model:
-      self.num_subsampled_scans = 1080
-    else:
-      self.num_subsampled_scans = 36
-    self.input_dim = self.num_subsampled_scans + 2
 
     if not os.path.exists(self.model_path):
       rospy.logerr('Model path does not exist: {}'.format(self.model_path))
@@ -75,12 +60,31 @@ class DeepMotionPlanner():
       rospy.logerr('Please check the parameter: {}'.format(rospy.resolve_name('~protobuf_file')))
       exit()
 
+    # Load ROS parameters
+    self.laser_scan_stride = rospy.get_param('~laser_scan_stride', default=1) # Take every ith element
+    self.n_laser_scans = rospy.get_param('~n_laser_scans', default=1080) # Cut n elements from the center to adjust the length
+    self.model_path = rospy.get_param('~model_path')
+    self.pickle_weights_path = rospy.get_param('~pickle_weights_path', default=None)
+    self.use_pickle_weights = rospy.get_param('~use_pickle_weights', default=False)
+    self.protobuf_file = rospy.get_param('~protobuf_file', 'graph.pb')
+    self.use_checkpoints = rospy.get_param('~use_checkpoints', default=False)
+    self.use_conv_model = rospy.get_param('~use_conv_model', default=False)
+
+    # Switch between setup for fully connected and convolutional model
+    if self.use_conv_model:
+      self.num_subsampled_scans = 1080
+    else:
+      # The fully connected model expects subsampled / min-pooled range findings as an input
+      self.num_subsampled_scans = 36
+    self.input_dim = self.num_subsampled_scans + 2
+
+
     # Use a separate thread to process the received data
     self.interrupt_event = threading.Event()
     self.processing_thread = threading.Thread(target=self.processing_data)
     self.scan_lock = threading.Lock()
 
-    # ROS topics
+    # ROS publishers and subscribers
     scan_sub = rospy.Subscriber('scan', LaserScan, self.scan_callback)
     goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_topic_callback)
     joystick_sub = rospy.Subscriber('/joy', Joy, self.joystick_callback)
@@ -91,7 +95,7 @@ class DeepMotionPlanner():
     self.input_laser_pub = rospy.Publisher('/deep_planner/input/laser', LaserScan, queue_size=1)
 
 
-    # We over the same action api as the move base package
+    # Use the move_base action API
     self._as = actionlib.SimpleActionServer('deep_move_base', MoveBaseAction, auto_start = False)
     self._as.register_goal_callback(self.goal_callback)
     self._as.register_preempt_callback(self.preempt_callback)
@@ -209,7 +213,7 @@ class DeepMotionPlanner():
           goal_msg.data = data
           self.input_goal_pub.publish(goal_msg)
 
-          input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2]
+          input_data = list(transformed_scans.tolist()[0]) + data.tolist()[0:2] # [Range findings, target angle, target distance]
 
           (base_position,base_orientation) = self.transform_listener.lookupTransform('/map', '/base_link', rospy.Time())
 
@@ -231,7 +235,7 @@ class DeepMotionPlanner():
     If this is the case, set the current goal to succeeded.
     """
     position_tolerance = 0.2
-    orientation_tolerance = 10.0 #0.1
+    orientation_tolerance = 10.0 # Used to be 0.1, but now only the position is used and not the heading
     if abs(target[0]) < position_tolerance \
         and abs(target[1]) < position_tolerance \
         and abs(target[2]) < orientation_tolerance:
@@ -325,7 +329,6 @@ class DeepMotionPlanner():
     else:
       self.send_motion_commands = False
       rospy.logdebug("Sending motion commands: OFF")
-
 
     # Abort planning
     if data.buttons[4] == 1 and data.buttons[5] == 1:
