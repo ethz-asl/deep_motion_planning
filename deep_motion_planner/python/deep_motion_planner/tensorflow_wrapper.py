@@ -80,16 +80,14 @@ class TensorflowWrapper():
         Take the given data and perform the model inference on it
         """
         if self.init_from_graph:
-#           feed_dict = {'data_input:0': [data], 'keep_prob_placeholder:0': 1.0}
-          feed_dict = {'data_input:0': [data]}
+          feed_dict = {'data_input:0': [data], 'keep_prob_placeholder:0': 1.0}
 
           prediction = self.sess.run(['model_inference:0'], feed_dict=feed_dict)[0]
 
           return (np.maximum(0.0, prediction[0,0]), prediction[0,1])
         else:
-#           feed_dict = {self.input_data_placeholder: [data],
-#                        self.keep_prob_placeholder: 1.0}
-          feed_dict = {self.input_data_placeholder: [data]}
+          feed_dict = {self.input_data_placeholder: [data],
+                       self.keep_prob_placeholder: 1.0}
           prediction = self.sess.run(self.model_inference, feed_dict=feed_dict)[0]
           std_trans = 0.1
           std_rot = 0.1
