@@ -24,7 +24,7 @@ class TrainingWrapper():
     self.runners = None
     self.sess = None
     self.custom_data_runner = None
-    self.eval_n_elements = 1000
+    self.eval_n_elements = 200
     self.eval_batch_size = 1024
     self.max_perception_radius = 30.0
     self.save_frequency = 20000
@@ -54,6 +54,7 @@ class TrainingWrapper():
       self.sess.close()
 
   def get_model_name(self):
+    """Asseble the model name from the training specs"""
     train_dataset = self.args.datafile_train[:-3]
     training_steps = str(self.args.max_steps / 1000) + 'k'
     use_conv = 'conv' if self.args.use_conv_model else 'fc'
@@ -85,11 +86,13 @@ class TrainingWrapper():
 
       # Define the used machine learning model
       global_step, learning_rate = self.model.learning_rate(self.args.learning_rate)
+      # Only use 50 % of the GPU memory
       config = tf.ConfigProto(gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5), device_count = {'GPU': 1},
                               intra_op_parallelism_threads = 8)
 
       self.sess = tf.Session(config=config)
 
+      # Start multi-threaded data runner
       logger.info('Create the data runner for the input data')
       self.custom_data_runner =  CustomDataRunner(self.args.datafile_train, self.args.batch_size, 2**14,
                                                   max_perception_radius=self.max_perception_radius, use_conv_model=self.args.use_conv_model)
@@ -111,7 +114,7 @@ class TrainingWrapper():
       eval_predictions_placeholder = tf.placeholder(tf.float32, shape=[self.eval_n_elements,2])
       evaluation, evaluation_split = self.model.evaluation(eval_predictions_placeholder, eval_cmd_placeholder)
 
-      # This model is saved with the trained weights and can direclty be executed
+      # This model is saved with the trained weights and can directly be executed
       exe_data_placeholder, exe_cmd_placeholder = self.placeholder_inputs(self.dist_meas_size+self.target_size, self.cmd_size)
       model_inference = self.model.inference(exe_data_placeholder, keep_prob_placeholder, 1,
                                         training=False, reuse=True, output_name='model_inference')
@@ -151,6 +154,13 @@ class TrainingWrapper():
       # Vector to average the duration over the last report steps
       duration_vector = [0.0] * (self.args.eval_steps // 100)
 
+      # Evaluation data
+#       (X_eval,Y_eval) = DataHandler(self.args.datafile_eval, self.eval_n_elements, shuffle = False,
+#                                     laser_transform = True, num_dist_values = self.dist_meas_size,
+#                                     max_perception_radius=self.max_perception_radius).next_batch()
+#       X_eval = self.check_extend(X_eval, np.ceil(self.eval_n_elements / self.eval_batch_size) * self.eval_batch_size)
+#
+#       print("Evaluation data dimensions: {}".format(X_eval.shape))
 
       if self.args.weight_initialize:
 
@@ -162,11 +172,6 @@ class TrainingWrapper():
         else:
           logger.warning('No weights are loaded!')
           logger.warning('File does not exist: {}'.format(self.args.weight_initialize))
-
-#       logger.info('Load the evaluation data')
-#       (X_eval,Y_eval) = DataHandler(self.args.datafile_eval, self.eval_n_elements,
-#           shuffle=False, laser_subsampling=True, max_perception_radius=self.max_perception_radius).next_batch()
-#       X_eval = self.check_extend(X_eval, np.ceil(self.eval_n_elements / self.eval_batch_size) * self.eval_batch_size)
 
       loss_train = 0.0
       # Perform all training steps
@@ -183,10 +188,6 @@ class TrainingWrapper():
             feed_dict=feed_dict)
 
         duration = time.time() - start_time
-
-#         ts_load = time.time()
-#         a, b = self.training_data_handler.next_batch()
-#         print("Loading data took {} ms".format((time.time() - ts_load) * 1000))
 
         # Report every 100 steps
         if step > 0 and step % 100 == 0:
@@ -211,22 +212,15 @@ class TrainingWrapper():
 #           for index in range(X_eval.shape[0] // self.eval_batch_size):
 #             start_index = index*self.eval_batch_size
 #             end_index = (index+1)*self.eval_batch_size
-#             feed_dict = {
-#                 eval_data_placeholder: X_eval[start_index:end_index,:-1],
-#                 keep_prob_placeholder: 1.0
-#                 }
-#             eval_predictions[start_index:end_index,:] = self.sess.run([eval_prediction],
-#                 feed_dict=feed_dict)[0]
+#             feed_dict = {eval_data_placeholder: X_eval[start_index:end_index,:-1], keep_prob_placeholder: 1.0}
+#             eval_predictions[start_index:end_index,:] = self.sess.run([eval_prediction], feed_dict=feed_dict)[0]
 #
 #           # Finally evaluate the predictions and compute the scores
-#           feed_dict = {
-#               eval_predictions_placeholder: eval_predictions[:self.eval_n_elements,:],
-#               eval_cmd_placeholder:  Y_eval,
-#               keep_prob_placeholder: 1.0
-#               }
+#           feed_dict = {eval_predictions_placeholder: eval_predictions[:self.eval_n_elements,:],
+#                        eval_cmd_placeholder:  Y_eval,
+#                        keep_prob_placeholder: 1.0}
 #
-#           loss_value, loss_split_value, summary_str = self.sess.run([evaluation,
-#             evaluation_split, eval_summary_op], feed_dict=feed_dict)
+#           loss_value, loss_split_value, summary_str = self.sess.run([evaluation, evaluation_split, eval_summary_op], feed_dict=feed_dict)
 #
 #           duration_eval = time.time() - start_eval
 #
